@@ -1,782 +1,860 @@
 {
- "openapi": "3.1.0",
- "info": {
-  "title": "Пульс маршрута — Backend",
-  "description": "Приём NDTP-телеметрии, прогноз опозданий на 10–15 мин, API диспетчерского дашборда.",
-  "version": "1.0.0"
- },
- "paths": {
-  "/api/login": {
-   "post": {
-    "summary": "Вход диспетчера: ставит cookie сессии",
-    "operationId": "api_login_api_login_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/LoginReq"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Пульс маршрута — Backend",
+    "description": "Приём NDTP-телеметрии, прогноз опозданий на 10–15 мин, API диспетчерского дашборда.",
+    "version": "1.0.0"
   },
-  "/api/logout": {
-   "post": {
-    "summary": "Выход",
-    "operationId": "api_logout_api_logout_post",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    }
-   }
-  },
-  "/health": {
-   "get": {
-    "summary": "Health",
-    "operationId": "health_health_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/state": {
-   "get": {
-    "summary": "Снимок для дашборда: поток, KPI, ТС с прогнозами, список инцидентов",
-    "operationId": "api_state_api_state_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/routes": {
-   "get": {
-    "summary": "Геометрия маршрутов: GPS-треки (по дорогам) и остановки",
-    "operationId": "api_routes_api_routes_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/ribbons": {
-   "get": {
-    "summary": "Ленты маршрутов: ТС на линии вдоль рейса — факт и положение по графику",
-    "operationId": "api_ribbons_api_ribbons_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/vehicles/{tr_id}/thread": {
-   "get": {
-    "summary": "Нитка графика ТС: план, факт проездов и прогноз на текущем рейсе",
-    "operationId": "api_thread_api_vehicles__tr_id__thread_get",
-    "parameters": [
-     {
-      "name": "tr_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "integer",
-       "title": "Tr Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/vehicles/{tr_id}/history": {
-   "get": {
-    "summary": "История прогнозов ТС и их онлайн-проверка",
-    "operationId": "api_history_api_vehicles__tr_id__history_get",
-    "parameters": [
-     {
-      "name": "tr_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "integer",
-       "title": "Tr Id"
-      }
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "default": 48,
-       "title": "Limit"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/vehicles/{tr_id}/whatif": {
-   "post": {
-    "summary": "What-if: пересчёт прогноза моделью при изменённых условиях движения",
-    "operationId": "api_whatif_api_vehicles__tr_id__whatif_post",
-    "parameters": [
-     {
-      "name": "tr_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "integer",
-       "title": "Tr Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/WhatIf"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/analytics": {
-   "get": {
-    "summary": "BI-аналитика: риски во времени, проблемные ТС, причины, точность, производительность",
-    "description": "hours — окно по времени потока (None — весь день); bin_min — шаг графика «когда были риски».",
-    "operationId": "api_analytics_api_analytics_get",
-    "parameters": [
-     {
-      "name": "hours",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "number"
+  "paths": {
+    "/api/login": {
+      "post": {
+        "summary": "Вход диспетчера: ставит cookie сессии",
+        "operationId": "api_login_api_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginReq"
+              }
+            }
+          },
+          "required": true
         },
-        {
-         "type": "null"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
-       ],
-       "title": "Hours"
       }
-     },
-     {
-      "name": "bin_min",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "default": 15,
-       "title": "Bin Min"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/me": {
-   "get": {
-    "summary": "Текущий пользователь, его настройки и конфигурация клиента",
-    "operationId": "api_me_api_me_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/me/settings": {
-   "put": {
-    "summary": "Сохранить настройки аккаунта",
-    "operationId": "api_save_settings_api_me_settings_put",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/Settings"
-       }
-      }
-     },
-     "required": true
     },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
+    "/api/logout": {
+      "post": {
+        "summary": "Выход",
+        "operationId": "api_logout_api_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
         }
-       }
       }
-     }
-    }
-   }
-  },
-  "/api/actions": {
-   "post": {
-    "summary": "Журнал действий диспетчера (меры, отметка «прогноз неверен» → датасет дообучения)",
-    "operationId": "api_action_api_actions_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/Action"
-       }
-      }
-     },
-     "required": true
     },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
         }
-       }
       }
-     }
-    }
-   }
-  },
-  "/api/report/dispatcher": {
-   "get": {
-    "summary": "Отчёт о работе диспетчеров за период: CSV (Excel) или страница для печати/PDF",
-    "operationId": "api_report_api_report_dispatcher_get",
-    "parameters": [
-     {
-      "name": "hours",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "number"
+    },
+    "/api/state": {
+      "get": {
+        "summary": "Снимок для дашборда: поток, KPI, ТС с прогнозами, список инцидентов",
+        "operationId": "api_state_api_state_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/routes": {
+      "get": {
+        "summary": "Геометрия маршрутов: GPS-треки (по дорогам) и остановки",
+        "operationId": "api_routes_api_routes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ribbons": {
+      "get": {
+        "summary": "Ленты маршрутов: ТС на линии вдоль рейса — факт и положение по графику",
+        "operationId": "api_ribbons_api_ribbons_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/vehicles/{tr_id}/thread": {
+      "get": {
+        "summary": "Нитка графика ТС: план, факт проездов и прогноз на текущем рейсе",
+        "operationId": "api_thread_api_vehicles__tr_id__thread_get",
+        "parameters": [
+          {
+            "name": "tr_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tr Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/vehicles/{tr_id}/history": {
+      "get": {
+        "summary": "История прогнозов ТС и их онлайн-проверка",
+        "operationId": "api_history_api_vehicles__tr_id__history_get",
+        "parameters": [
+          {
+            "name": "tr_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tr Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 48,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/vehicles/{tr_id}/whatif": {
+      "post": {
+        "summary": "What-if: пересчёт прогноза моделью при изменённых условиях движения",
+        "operationId": "api_whatif_api_vehicles__tr_id__whatif_post",
+        "parameters": [
+          {
+            "name": "tr_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tr Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatIf"
+              }
+            }
+          }
         },
-        {
-         "type": "null"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
-       ],
-       "title": "Hours"
       }
-     },
-     {
-      "name": "fmt",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "string",
-       "default": "csv",
-       "title": "Fmt"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
+    },
+    "/api/analytics": {
+      "get": {
+        "summary": "BI-аналитика: риски во времени, проблемные ТС, причины, точность, производительность",
+        "description": "hours — окно по времени потока (None — весь день); bin_min — шаг графика «когда были риски».",
+        "operationId": "api_analytics_api_analytics_get",
+        "parameters": [
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hours"
+            }
+          },
+          {
+            "name": "bin_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 15,
+              "title": "Bin Min"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
-    }
-   }
-  },
-  "/api/replay/start": {
-   "post": {
-    "summary": "Проиграть архив как живой NDTP-поток (TCP на собственный порт)",
-    "operationId": "replay_start_api_replay_start_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/ReplayReq"
-       }
-      }
-     },
-     "required": true
     },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
+    "/api/me": {
+      "get": {
+        "summary": "Текущий пользователь, его настройки и конфигурация клиента",
+        "operationId": "api_me_api_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
         }
-       }
       }
-     }
-    }
-   }
-  },
-  "/api/routes/rebuild": {
-   "post": {
-    "summary": "Перечитать расписание и достроить пути по дорогам для новых вариантов рейсов",
-    "operationId": "routes_rebuild_api_routes_rebuild_post",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/replay/speed": {
-   "post": {
-    "summary": "Изменить скорость воспроизведения архива на лету (без перезапуска)",
-    "operationId": "replay_speed_api_replay_speed_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/SpeedReq"
-       }
-      }
-     },
-     "required": true
     },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/replay/stop": {
-   "post": {
-    "summary": "Остановить replay (поток оборвётся — дашборд покажет «нет связи»)",
-    "operationId": "replay_stop_api_replay_stop_post",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/stats": {
-   "get": {
-    "summary": "Технические метрики: поток, инференс, ML",
-    "operationId": "api_stats_api_stats_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    }
-   }
-  }
- },
- "components": {
-  "schemas": {
-   "Action": {
-    "properties": {
-     "tr_id": {
-      "type": "integer",
-      "title": "Tr Id"
-     },
-     "kind": {
-      "type": "string",
-      "title": "Kind",
-      "description": "measure | follow | wrong_forecast"
-     },
-     "detail": {
-      "additionalProperties": true,
-      "type": "object",
-      "title": "Detail",
-      "default": {}
-     }
-    },
-    "type": "object",
-    "required": [
-     "tr_id",
-     "kind"
-    ],
-    "title": "Action"
-   },
-   "HTTPValidationError": {
-    "properties": {
-     "detail": {
-      "items": {
-       "$ref": "#/components/schemas/ValidationError"
-      },
-      "type": "array",
-      "title": "Detail"
-     }
-    },
-    "type": "object",
-    "title": "HTTPValidationError"
-   },
-   "LoginReq": {
-    "properties": {
-     "user": {
-      "type": "string",
-      "title": "User"
-     },
-     "password": {
-      "type": "string",
-      "title": "Password"
-     }
-    },
-    "type": "object",
-    "required": [
-     "user",
-     "password"
-    ],
-    "title": "LoginReq"
-   },
-   "ReplayReq": {
-    "properties": {
-     "speed": {
-      "type": "number",
-      "title": "Speed",
-      "description": "ускорение времени потока (1 — реальное время)",
-      "default": 5
-     },
-     "start": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Start",
-      "description": "с какого момента проигрывать",
-      "default": "2026-01-06 06:00"
-     },
-     "hours": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Hours"
-     },
-     "split": {
-      "type": "string",
-      "title": "Split",
-      "default": "validate"
-     }
-    },
-    "type": "object",
-    "title": "ReplayReq"
-   },
-   "Settings": {
-    "properties": {
-     "map_provider": {
-      "type": "string",
-      "pattern": "^(osm|yandex)$",
-      "title": "Map Provider",
-      "description": "Подложка: OpenStreetMap или Яндекс Карты",
-      "default": "osm"
-     },
-     "muted": {
-      "type": "boolean",
-      "title": "Muted",
-      "description": "Приглушённая подложка",
-      "default": true
-     },
-     "demo_speed": {
-      "type": "integer",
-      "maximum": 120.0,
-      "minimum": 1.0,
-      "title": "Demo Speed",
-      "description": "Скорость демо-потока (1 — реальное время)",
-      "default": 5
-     },
-     "brand_font": {
-      "type": "string",
-      "maxLength": 40,
-      "title": "Brand Font",
-      "description": "Шрифт названия «Пульс маршрута»",
-      "default": "Tektur"
-     },
-     "sound": {
-      "type": "boolean",
-      "title": "Sound",
-      "description": "Звуковое оповещение о новых алертах высокого риска",
-      "default": true
-     }
-    },
-    "type": "object",
-    "title": "Settings"
-   },
-   "SpeedReq": {
-    "properties": {
-     "speed": {
-      "type": "number",
-      "maximum": 120.0,
-      "minimum": 0.5,
-      "title": "Speed",
-      "description": "1 — реальное время"
-     }
-    },
-    "type": "object",
-    "required": [
-     "speed"
-    ],
-    "title": "SpeedReq"
-   },
-   "ValidationError": {
-    "properties": {
-     "loc": {
-      "items": {
-       "anyOf": [
-        {
-         "type": "string"
+    "/api/me/settings": {
+      "put": {
+        "summary": "Сохранить настройки аккаунта",
+        "operationId": "api_save_settings_api_me_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Settings"
+              }
+            }
+          },
+          "required": true
         },
-        {
-         "type": "integer"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
-       ]
-      },
-      "type": "array",
-      "title": "Location"
-     },
-     "msg": {
-      "type": "string",
-      "title": "Message"
-     },
-     "type": {
-      "type": "string",
-      "title": "Error Type"
-     }
+      }
     },
-    "type": "object",
-    "required": [
-     "loc",
-     "msg",
-     "type"
-    ],
-    "title": "ValidationError"
-   },
-   "WhatIf": {
-    "properties": {
-     "scenarios": {
-      "items": {
-       "type": "string"
-      },
-      "type": "array",
-      "title": "Scenarios",
-      "default": [
-       "none",
-       "signal_priority",
-       "short_dwell"
-      ]
-     }
+    "/api/actions": {
+      "post": {
+        "summary": "Журнал действий диспетчера (меры, отметка «прогноз неверен» → датасет дообучения)",
+        "operationId": "api_action_api_actions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Action"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     },
-    "type": "object",
-    "title": "WhatIf"
-   }
-  }
- }
+    "/api/report/dispatcher": {
+      "get": {
+        "summary": "Отчёт о работе диспетчеров за период: CSV (Excel) или страница для печати/PDF",
+        "operationId": "api_report_api_report_dispatcher_get",
+        "parameters": [
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hours"
+            }
+          },
+          {
+            "name": "fmt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "csv",
+              "title": "Fmt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/replay/start": {
+      "post": {
+        "summary": "Проиграть архив как живой NDTP-поток (TCP на собственный порт)",
+        "operationId": "replay_start_api_replay_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/routes/rebuild": {
+      "post": {
+        "summary": "Перечитать расписание и достроить пути по дорогам для новых вариантов рейсов",
+        "operationId": "routes_rebuild_api_routes_rebuild_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/datasets": {
+      "get": {
+        "summary": "Доступные датасеты для воспроизведения и текущий",
+        "operationId": "api_datasets_api_datasets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dataset": {
+      "post": {
+        "summary": "Переключить датасет: поток перезапускается с 06:00 на текущей скорости",
+        "operationId": "api_dataset_api_dataset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/replay/speed": {
+      "post": {
+        "summary": "Изменить скорость воспроизведения архива на лету (без перезапуска)",
+        "operationId": "replay_speed_api_replay_speed_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeedReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/replay/stop": {
+      "post": {
+        "summary": "Остановить replay (поток оборвётся — дашборд покажет «нет связи»)",
+        "operationId": "replay_stop_api_replay_stop_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "summary": "Технические метрики: поток, инференс, ML",
+        "operationId": "api_stats_api_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Action": {
+        "properties": {
+          "tr_id": {
+            "type": "integer",
+            "title": "Tr Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "measure | follow | wrong_forecast"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Detail",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "tr_id",
+          "kind"
+        ],
+        "title": "Action"
+      },
+      "DatasetReq": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "title": "Dataset",
+            "description": "validate — архив хакатона, synthetic — синтетика «несколько машин на маршруте»"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset"
+        ],
+        "title": "DatasetReq"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginReq": {
+        "properties": {
+          "user": {
+            "type": "string",
+            "title": "User"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "password"
+        ],
+        "title": "LoginReq"
+      },
+      "ReplayReq": {
+        "properties": {
+          "speed": {
+            "type": "number",
+            "title": "Speed",
+            "description": "ускорение времени потока (1 — реальное время)",
+            "default": 5
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "с какого момента проигрывать",
+            "default": "2026-01-06 06:00"
+          },
+          "hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours"
+          },
+          "split": {
+            "type": "string",
+            "title": "Split",
+            "default": "validate"
+          }
+        },
+        "type": "object",
+        "title": "ReplayReq"
+      },
+      "Settings": {
+        "properties": {
+          "map_provider": {
+            "type": "string",
+            "pattern": "^(osm|yandex)$",
+            "title": "Map Provider",
+            "description": "Подложка: OpenStreetMap или Яндекс Карты",
+            "default": "osm"
+          },
+          "muted": {
+            "type": "boolean",
+            "title": "Muted",
+            "description": "Приглушённая подложка",
+            "default": true
+          },
+          "demo_speed": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Demo Speed",
+            "description": "Скорость демо-потока (1 — реальное время)",
+            "default": 5
+          },
+          "brand_font": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Brand Font",
+            "description": "Шрифт названия «Пульс маршрута»",
+            "default": "Tektur"
+          },
+          "sound": {
+            "type": "boolean",
+            "title": "Sound",
+            "description": "Звуковое оповещение о новых алертах высокого риска",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "Settings"
+      },
+      "SpeedReq": {
+        "properties": {
+          "speed": {
+            "type": "number",
+            "maximum": 120.0,
+            "minimum": 0.5,
+            "title": "Speed",
+            "description": "1 — реальное время"
+          }
+        },
+        "type": "object",
+        "required": [
+          "speed"
+        ],
+        "title": "SpeedReq"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WhatIf": {
+        "properties": {
+          "scenarios": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scenarios",
+            "default": [
+              "none",
+              "signal_priority",
+              "short_dwell"
+            ]
+          }
+        },
+        "type": "object",
+        "title": "WhatIf"
+      }
+    },
+    "securitySchemes": {
+      "basic": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Логин и пароль дашборда"
+      }
+    }
+  },
+  "security": [
+    {
+      "basic": []
+    }
+  ]
 }

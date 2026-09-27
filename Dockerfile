@@ -6,5 +6,5 @@ COPY requirements.txt requirements-docs.txt ./
 RUN pip install --no-cache-dir -r requirements.txt -r requirements-docs.txt
 COPY . .
 # документация кода (Sphinx) — отдаётся backend'ом по /code-docs/
-RUN python -m sphinx -q -b html docs/source docs/html || echo "sphinx: сборка документации пропущена"
+RUN python -m sphinx -q -W --keep-going -b html docs/source docs/html
 ENV PYTHONPATH=/app PYTHONUNBUFFERED=1 HOME=/tmp
