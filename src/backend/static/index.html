@@ -1,0 +1,1661 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пульс маршрута</title>
+<link rel="icon" href="/static/logo-pulse.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tektur:wght@600&family=Rubik+Mono+One&family=Poiret+One&family=Days+One&family=Handjet:wght@600&family=Pixelify+Sans:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --label:#1D1D1F; --label2:#6E6E73; --label3:#86868B; --bg:#F5F5F7;
+  --glass:rgba(255,255,255,.82); --card:#FFFFFF; --fill:rgba(120,120,128,.12); --fill2:rgba(120,120,128,.07);
+  --sep:rgba(60,60,67,.12); --blue:#0071E3; --blue2:#007AFF;
+  --green:#34C759; --green-t:#248A3D; --green-bg:#E9F7EE;
+  --yellow:#FFCC00; --yellow-t:#946200; --yellow-bg:#FFF6D6;
+  --red:#FF3B30; --red-t:#D70015; --red-bg:#FFECEB;
+  --shadow:0 8px 32px rgba(0,0,0,.10);
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","Segoe UI",Roboto,sans-serif;
+  --brand:"Tektur",var(--sf);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--label);font-family:var(--sf);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button{font-family:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(0,113,227,.45);outline-offset:1px}
+#map{position:fixed;inset:0;background:var(--bg);z-index:1}
+#map.ya,#map.ya.leaflet-container{background:transparent}
+#ymap{position:fixed;top:0;right:0;bottom:0;left:372px;z-index:1;display:none}  /* левее — панель; логотип Яндекса остаётся виден */
+#ymap.muted .ymaps-2-1-79-ground-pane{opacity:.62}
+body.ya #ctl{bottom:44px}body.ya .legend{bottom:44px}  /* не закрываем копирайт Яндекса */
+.ylab{font:500 11px var(--sf);color:#3A3A3C;white-space:nowrap;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;pointer-events:none}
+.leaflet-container{background:var(--bg);font-family:var(--sf)}
+#map.muted .leaflet-tile-pane{opacity:.62}  /* композитная прозрачность — дёшево, в отличие от filter */
+.leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.65)!important;border-radius:6px 0 0 0}
+.glass{background:var(--glass);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);box-shadow:var(--shadow);border:.5px solid rgba(255,255,255,.6)}
+.sub{font-size:13px;color:var(--label2)}.cap{font-size:12px;color:var(--label3)}
+
+/* ---------- левая панель ---------- */
+#side{position:fixed;left:16px;top:16px;bottom:16px;width:340px;border-radius:22px;display:flex;flex-direction:column;overflow:hidden;z-index:500}
+.side-head{padding:16px 16px 10px;display:flex;flex-direction:column;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{width:34px;height:34px;border-radius:9px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.brand .nm{font-family:var(--brand);font-size:18px;font-weight:600;letter-spacing:.01em;line-height:1.1;white-space:nowrap}
+.brand .cl{font-size:12px;color:var(--label2);margin-top:4px;white-space:nowrap}
+.pill{margin-left:auto;display:flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;border:none;font-size:12px;font-weight:600;white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%}
+.pill.live i{animation:beat 1.6s ease-in-out infinite}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.35}}
+.segctl{display:flex;padding:2px;border-radius:9px;background:var(--fill)}
+.segctl button{flex:1;height:28px;border:none;border-radius:7px;background:transparent;font-size:13px;font-weight:500}
+.segctl button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04);font-weight:600}
+.hero{display:flex;align-items:center;gap:14px;padding:13px 15px;border-radius:16px;background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.hero .n{font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.hero .t{display:flex;flex-direction:column;gap:2px}.hero .t b{font-size:15px;font-weight:600}
+.stats{display:flex;gap:6px}
+.stat{flex:1;padding:7px 10px;border-radius:12px;background:var(--fill2);display:flex;flex-direction:column;min-width:0}
+.stat b{font-size:15px;font-weight:600}.stat span{font-size:11px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search{display:flex;align-items:center;gap:8px;height:36px;padding:0 10px;border-radius:10px;background:var(--fill);cursor:text}
+.search input{flex:1;border:none;background:transparent;outline:none;font:inherit;font-size:15px;color:var(--label);min-width:0}
+.kbd{font-size:11px;color:var(--label3);padding:1px 6px;border-radius:5px;background:var(--fill)}
+#list{flex:1;overflow-y:auto;padding:2px 10px 10px;display:flex;flex-direction:column;gap:2px}
+.row{display:flex;align-items:center;gap:12px;width:100%;padding:9px 10px;border:none;border-radius:14px;background:transparent;text-align:left}
+.row:hover{background:var(--fill2)}
+.row.sel{background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+.row.new{animation:flash 1.6s ease 2}
+@keyframes flash{0%,100%{background:transparent}50%{background:var(--red-bg)}}
+.dotb{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.row .mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.row .t1{font-size:15px;font-weight:600}.row .t2{font-size:12px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .end{display:flex;flex-direction:column;align-items:flex-end;gap:1px;white-space:nowrap}
+.row .d{font-size:15px;font-weight:600}.row .e{font-size:12px;color:var(--label2)}
+.empty{padding:28px 16px;text-align:center;color:var(--label2);font-size:13px;line-height:1.5}.empty b{display:block;color:var(--label);font-size:15px;margin-bottom:4px}
+.side-foot{padding:10px 16px 13px;border-top:.5px solid var(--sep);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.link{border:none;background:none;color:var(--blue);font-size:13px;padding:4px 0}
+.demo{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--label2);white-space:nowrap;min-width:0}.demo .link{white-space:nowrap}.demo select{font:inherit;border:none;background:transparent;color:var(--blue);max-width:150px}
+
+/* ---------- карточка ---------- */
+#card{position:fixed;left:368px;top:16px;bottom:16px;width:460px;border-radius:22px;overflow-y:auto;overscroll-behavior:contain;z-index:500;display:none;background:rgba(245,245,247,.88)}
+.c-head{padding:16px 16px 4px;display:flex;align-items:center;gap:12px}
+.c-head .tt{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}.c-head .tt b{font-size:17px;font-weight:600}
+.x{width:30px;height:30px;border-radius:50%;border:none;background:var(--fill);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.c-hero{padding:6px 16px 10px;display:flex;align-items:center;gap:12px}
+.c-hero .l{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tag{align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:6px}
+.big{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.group{margin:0 12px 10px;border-radius:14px;background:var(--card);overflow:hidden}
+.gh{margin:14px 28px 6px;font-size:13px;font-weight:600;color:var(--label2)}
+.li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 14px;font-size:14px}
+.li+.li{border-top:.5px solid var(--sep)}.li .k{color:var(--label2);flex-shrink:0}.li .v{text-align:right;font-weight:500}
+.now{display:grid;grid-template-columns:repeat(3,1fr)}
+.now div{padding:11px 12px;display:flex;flex-direction:column;gap:2px}.now div+div{border-left:.5px solid var(--sep)}
+.now b{font-size:17px;font-weight:600}.now span{font-size:11px;color:var(--label2)}
+.why{padding:11px 14px;display:flex;flex-direction:column;gap:5px}.why+.why{border-top:.5px solid var(--sep)}
+.why .wl{display:flex;justify-content:space-between;gap:10px;font-size:13px}.why .wl b{font-weight:600;white-space:nowrap}
+.bar{height:4px;border-radius:2px;background:var(--fill)}.bar div{height:4px;border-radius:2px}
+.opt{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;border:none;background:var(--card);text-align:left}
+.opt+.opt{border-top:.5px solid var(--sep)}
+.opt .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.opt .ot{flex:1;display:flex;flex-direction:column;gap:1px}.opt .ot b{font-size:15px;font-weight:500}
+.best{font-size:11px;font-weight:600;color:var(--green-t);background:var(--green-bg);padding:1px 6px;border-radius:5px;margin-left:6px}
+.cta{margin:0 12px 4px;width:calc(100% - 24px);height:44px;border:none;border-radius:12px;font-size:16px;font-weight:600}
+.cfoot{margin-top:auto;position:sticky;bottom:0;padding-top:12px;background:linear-gradient(rgba(245,245,247,0),rgba(245,245,247,.97) 12px);z-index:2}
+details.more summary{list-style:none;cursor:pointer;padding:9px 14px;font-size:13px;color:var(--blue2);border-top:.5px solid var(--sep)}
+details.more summary::-webkit-details-marker{display:none}
+.warn{margin:0 28px 8px;font-size:11px;color:var(--label3);line-height:1.4}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:6px 12px 12px}
+.act{height:48px;border:none;border-radius:12px;background:var(--card);color:var(--blue2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:500}
+.act.on{background:var(--blue2);color:#fff}
+
+/* ---------- карта ---------- */
+#ctl{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;z-index:500;transition:right .25s ease}
+#ctl.shift{right:16px}  /* карточка теперь слева, рядом с панелью */
+body.ya #card{bottom:44px}
+body.card-open .legend{left:calc(50% + 414px);max-width:calc(100vw - 900px)}
+body.card-open #demoStrip,body.card-open #banner{left:844px;right:16px;transform:none;width:auto;min-width:0}
+body.card-open #demoStrip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+body.card-open .legend{white-space:normal;flex-wrap:wrap;row-gap:4px;gap:10px;font-size:11px;padding:7px 12px}
+body.card-open #toast{left:calc(50% + 414px)}  /* не закрываем логотип Яндекса */
+#ctl button{width:44px;height:44px;border:none;background:transparent;display:flex;align-items:center;justify-content:center}
+#ctl button:hover{background:var(--fill2)}#ctl hr{margin:0 9px;border:0;height:.5px;background:var(--sep)}
+.legend{position:fixed;left:calc(50% + 178px);transform:translateX(-50%);bottom:16px;display:flex;justify-content:center;gap:14px;padding:8px 14px;border-radius:12px;font-size:12px;color:var(--label2);z-index:450;white-space:nowrap}
+.legend span{display:flex;align-items:center;gap:6px}.legend i{width:9px;height:9px;border-radius:50%}
+#banner{position:fixed;left:calc(50% + 178px);top:16px;transform:translateX(-50%);display:none;align-items:center;gap:8px;padding:9px 14px;border-radius:12px;background:rgba(255,246,214,.96);color:#7A5200;font-size:13px;box-shadow:var(--shadow);z-index:600;white-space:nowrap}
+#banner i{width:8px;height:8px;border-radius:50%;background:#FF9F0A}
+#demoStrip{position:fixed;left:calc(50% + 178px);top:16px;transform:translateX(-50%);display:none;align-items:center;gap:8px;padding:7px 14px;border-radius:12px;
+  background:#5E5CE6;color:#fff;font-size:13px;box-shadow:var(--shadow);z-index:590;white-space:nowrap}
+#demoStrip b{font-weight:700;letter-spacing:.02em;text-transform:uppercase;font-size:11px;background:rgba(255,255,255,.22);padding:2px 7px;border-radius:6px}
+body.is-demo #banner{top:58px}
+#toast{position:fixed;left:calc(50% + 178px);bottom:62px;transform:translateX(-50%);display:none;align-items:center;gap:10px;padding:10px 16px 10px 12px;border-radius:14px;background:rgba(255,255,255,.96);box-shadow:0 8px 30px rgba(0,0,0,.16);z-index:700;white-space:nowrap}
+#sys{position:fixed;left:368px;top:16px;width:320px;border-radius:18px;display:none;z-index:650;overflow:hidden}#sys .li{font-size:13px}
+#acct{display:flex;align-items:center;gap:8px;border:none;background:none;padding:2px 0;font-size:13px;font-weight:500;color:var(--label)}
+.ava{width:26px;height:26px;border-radius:50%;background:linear-gradient(180deg,#8E8E93,#636366);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;text-transform:uppercase}
+#settings{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:16px}
+#settings .sheet{width:100%;max-width:560px;max-height:calc(100vh - 32px);overflow-y:auto;overflow-x:hidden;border-radius:20px;background:#F2F2F7;box-shadow:0 24px 80px rgba(0,0,0,.28)}
+.sh-head{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(242,242,247,.94);border-bottom:.5px solid var(--sep);z-index:1}
+.sh-head b{font-size:17px}.done{border:none;background:none;color:var(--blue2);font-size:17px;font-weight:600}
+.sh-body{padding:6px 0 18px}
+.sh-body .gh{margin:18px 32px 6px;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--label3)}
+.sh-body .group{margin:0 16px}.hint{margin:6px 32px 0;font-size:12px;color:var(--label3);line-height:1.4}
+.prof{display:flex;align-items:center;gap:14px;padding:14px}.prof .ava{width:52px;height:52px;font-size:22px}
+.maps{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin:0 16px}
+.mapc{position:relative;min-width:0;border:2px solid transparent;border-radius:14px;background:#fff;padding:0 0 10px;text-align:left;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.mapc.on{border-color:var(--blue2)}
+
+.mapc .pv{height:92px;display:block;width:100%}
+.mapc b{display:block;padding:10px 12px 0;font-size:15px}.mapc span{display:block;padding:2px 12px 0;font-size:12px;color:var(--label2)}
+.mapc .ck{position:absolute;right:8px;top:8px;width:22px;height:22px;border-radius:50%;background:var(--blue2);display:none;align-items:center;justify-content:center}
+.mapc.on .ck{display:flex}
+.speeds{display:flex;gap:0;padding:10px 12px}
+#biClose{position:sticky;float:right;top:14px;margin:14px 18px 0 0;z-index:2}
+.sw{position:relative;width:46px;height:28px;border-radius:14px;border:none;background:#E9E9EA;transition:background .2s;flex-shrink:0}
+.sw::after{content:'';position:absolute;left:2px;top:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:left .2s}
+.sw.on{background:#34C759}.sw.on::after{left:20px}
+#tour{position:fixed;inset:0;z-index:2000;display:none}
+#tour .spot{position:fixed;border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.5);transition:all .45s cubic-bezier(.2,.8,.2,1);pointer-events:none}
+#tour .spot::after{content:"";position:absolute;inset:-6px;border-radius:22px;border:2px solid #0A84FF;animation:tpulse 1.6s ease-out infinite}
+@keyframes tpulse{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.06)}}
+#tour .tip{position:fixed;left:50%;transform:translateX(-50%);width:min(440px,calc(100vw - 32px));box-sizing:border-box;background:#fff;border-radius:16px;padding:18px 18px 14px;box-shadow:0 18px 50px rgba(0,0,0,.3);transition:top .4s cubic-bezier(.2,.8,.2,1),bottom .4s cubic-bezier(.2,.8,.2,1);animation:tin .35s ease;overflow-wrap:break-word;word-break:normal}
+@keyframes tin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+#tour .tip .tt{display:block;font-size:17px;font-weight:700;margin-bottom:6px}
+#tour .tip p b{display:inline;font-size:inherit;font-weight:600}
+#tour .tip .tl{display:flex;align-items:center;gap:12px;margin:0 0 10px}#tour .tip .tl>span:last-child{flex:1;min-width:0;white-space:normal;line-height:1.35}#tour .tip .tl b{display:inline;font-size:14px;margin:0}
+#tour .tip .tv{position:relative;width:38px;height:38px;flex-shrink:0}#tour .tip .tv .vm{left:19px;top:19px}
+#tour .tip .tline{width:38px;height:8px;border-radius:4px;background:#0A84FF;box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.08);flex-shrink:0}
+#tour .tip p{margin:0 0 14px;font-size:14px;line-height:1.5;color:#3A3A3C}
+#tour .tip p .tl{display:flex}
+#tour .tip p .ln1{display:block;margin:0 0 5px}#tour .tip p .ln1:last-child{margin-bottom:0}#tour .tip p .ln1 .tl{margin:2px 0}
+#tour .tnav{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#tour .dots{display:flex;gap:5px}#tour .dots i{width:6px;height:6px;border-radius:50%;background:#D1D1D6;transition:all .3s}#tour .dots i.on{width:16px;border-radius:3px;background:#0A84FF}
+#tour button{border:none;border-radius:9px;height:32px;padding:0 12px;font-size:14px;font-weight:600}
+#tour .next{background:#0A84FF;color:#fff}#tour .back{background:var(--fill);color:#1D1D1F}#tour .skip{background:none;color:#86868B;font-weight:500;padding:0 4px}
+.fontrow{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 14px;border:none;background:var(--card);text-align:left;font-size:19px}
+.fontrow+.fontrow{border-top:.5px solid var(--sep)}
+.danger{width:100%;border:none;background:var(--card);color:#FF3B30;font-size:15px;padding:12px 14px;text-align:left}
+
+/* метка ТС: круг цвета риска + значок + стрелка курса; выбранная — пульсирующее кольцо */
+.leaflet-marker-icon.veh{transition:transform var(--dur,1.4s) linear}
+.leaflet-zoom-anim .leaflet-marker-icon.veh,.notrans .leaflet-marker-icon.veh{transition:none}
+.vm{position:absolute;left:0;top:0;width:0;height:0}
+.vm .rot{position:absolute;left:-19px;top:-19px;width:38px;height:38px}
+.vm .rot::before{content:"";position:absolute;left:50%;top:-1px;transform:translateX(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid var(--c);filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
+.vm .disc{position:absolute;left:-13px;top:-13px;width:26px;height:26px;border-radius:50%;background:var(--c);border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center}
+.vm.stale .disc{background:#AEAEB2}.vm.stale{opacity:.55}
+.vm.sel .disc{left:-17px;top:-17px;width:34px;height:34px;border-width:3px}
+.vm .halo{position:absolute;left:-17px;top:-17px;width:34px;height:34px;border-radius:50%;background:var(--c);opacity:0;pointer-events:none}
+.vm.sel .halo{animation:halo 1.8s ease-out infinite}
+.vm.hot .disc{box-shadow:0 0 0 4px rgba(255,59,48,.28),0 2px 6px rgba(0,0,0,.3)}
+@keyframes halo{0%{transform:scale(1);opacity:.45}100%{transform:scale(2.6);opacity:0}}
+.vm .lbl{position:absolute;left:18px;top:-12px;height:24px;padding:0 9px;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.18);display:flex;align-items:center;gap:5px;font:600 12px var(--sf);white-space:nowrap;color:var(--label)}
+.vm .lbl b{color:var(--t)}
+.vm.sel .lbl{left:22px}
+.stop-pin{position:absolute;left:0;top:0;transform:translate(-50%,-100%);pointer-events:none}
+.stop-pin .h{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#1D1D1F;border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center}
+.stop-pin .h i{transform:rotate(45deg);width:8px;height:8px;border-radius:50%;background:#fff}
+.stop-pin .lab{position:absolute;left:20px;top:-6px;padding:5px 9px;border-radius:9px;background:rgba(255,255,255,.96);box-shadow:0 2px 10px rgba(0,0,0,.16);white-space:nowrap;display:flex;flex-direction:column;font-size:12px;line-height:1.3}
+.stop-pin .lab span{color:var(--label2);max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.leaflet-tooltip.stop-label{background:transparent;border:none;box-shadow:none;padding:0 0 0 2px;font:500 11px var(--sf);color:#3A3A3C;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff}
+.leaflet-tooltip.stop-label:before{display:none}
+.leaflet-tooltip.stop-tip{font:12px var(--sf);border:none;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.16);padding:5px 9px}
+
+/* ---------- аналитика ---------- */
+#bi{position:fixed;left:372px;right:16px;top:16px;bottom:16px;border-radius:22px;z-index:520;display:none;overflow-y:auto;background:#F5F5F7;box-shadow:var(--shadow);contain:strict}
+.bi-head{padding:20px 24px 8px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.bi-head h2{margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em}
+.bi-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;padding:12px 24px 24px}
+.tile{grid-column:span 12;background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.04);min-width:0}
+.tile h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--label2)}
+.kpi b{display:block;font-size:24px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kpi span{font-size:12px;color:var(--label2)}
+.s2{grid-column:span 2}.s3{grid-column:span 3}.s4{grid-column:span 4}.s6{grid-column:span 6}.s8{grid-column:span 8}
+.chart{position:relative;height:210px}
+.kpi .kl{display:block;font-size:13px;color:var(--label2);margin-bottom:4px}.kpi .kh{display:block;font-size:12px;color:var(--label3);margin-top:2px}
+.hint2{margin:-4px 0 10px;font-size:12px;color:var(--label3);line-height:1.4}
+.tile{position:relative}.nodata{position:absolute;inset:70px 16px 16px;display:none;align-items:center;justify-content:center;color:var(--label3);font-size:13px;background:#fff}
+details.tech summary{cursor:pointer;list-style:none}details.tech summary::-webkit-details-marker{display:none}
+details.tech summary h3::before{content:"› ";color:var(--label3)}details.tech[open] summary h3::before{content:"⌄ "}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--label2);padding:8px 8px;border-bottom:.5px solid var(--sep);white-space:nowrap}
+td{padding:9px 8px;border-bottom:.5px solid var(--sep)}tr:last-child td{border-bottom:none}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--fill2)}
+td.num,th.num{text-align:right}
+.rd{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+@media (max-width:1250px){.s2{grid-column:span 4}.s3,.s4{grid-column:span 6}.s6,.s8{grid-column:span 12}}
+@media (max-width:1100px){#card{left:16px;right:16px;width:auto;top:auto;bottom:16px;height:55vh}#sys{left:16px}#side{width:300px}#ctl.shift{right:16px}#bi{left:332px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- вид «Ленты» ---------- */
+#lines{position:fixed;inset:0;padding:16px 16px 16px 372px;background:var(--bg);z-index:480;display:none;grid-template-columns:minmax(0,1fr) 380px;gap:16px}
+.ln-main,.ln-side{background:#fff;border-radius:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.ln-top{padding:16px 18px 8px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.ln-top h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.ln-leg0{margin-left:auto;display:flex;gap:14px;font-size:12px;color:var(--label2);align-items:center;flex-wrap:wrap}
+.ln-leg0 span{display:flex;align-items:center;gap:5px}
+#lnGosha{display:flex;align-items:center;gap:10px;padding:0 18px 10px}
+#lnRows{flex:1;overflow-y:auto;padding:0 10px 10px;display:flex;flex-direction:column;gap:4px}
+.rb{padding:10px 12px 8px;border-radius:14px;border:1.5px solid transparent;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.rb:hover{background:#FAFAFC}.rb.sel{background:#EEF5FF;border-color:#0A84FF}
+.rb-h{display:flex;align-items:center;gap:10px;min-width:0}
+.rb-n{font-size:13px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rb-s{margin-left:auto;font-size:12px;color:var(--label2);white-space:nowrap}.rb-s b{font-weight:600;color:var(--label)}
+.bdg{min-width:30px;height:22px;padding:0 6px;border-radius:7px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap}
+.track{position:relative;height:34px}
+.track i{position:absolute;display:block}
+.track .ln{left:0;right:0;top:15px;height:4px;border-radius:2px;background:#E5E5EA}
+.track .tk{top:12px;width:2px;height:10px;margin-left:-1px;border-radius:1px;background:#C7C7CC}
+.track .bn{top:9px;height:16px;border-radius:8px;background:rgba(255,204,0,.5)}
+.track .lg{top:13px;height:8px;border-radius:4px}
+.track .ghost{top:7px;width:20px;height:20px;margin-left:-10px;border-radius:50%;border:2px dashed #8E8E93;background:#fff}
+.vd{position:absolute;top:7px;width:20px;height:20px;margin-left:-10px;padding:0;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;transition:left .8s ease}
+.rb-f{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#8E8E93}.rb-f span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34%}
+.ln-side{overflow-y:auto;padding:16px 0 0}
+#lnInc{display:flex;flex-direction:column}#lnInc>*{margin-left:18px;margin-right:18px}
+#lnMiniBox{margin:4px 18px 0}#lnMiniBox .gh{margin:10px 2px 6px;font-size:12px;color:var(--label2)}
+#lnMini{height:220px;border-radius:14px;overflow:hidden;background:#EEF0F3;cursor:pointer}
+#lnMiniNote{margin:6px 2px 0}
+.ln-ih{display:flex;align-items:center;gap:8px}
+.ln-hl{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-top:6px}
+.ln-th{margin:12px 12px 0;padding:12px 12px 8px;border-radius:14px;background:#F5F5F7;display:flex;flex-direction:column;gap:6px}
+.ln-th-h{display:flex;justify-content:space-between;align-items:baseline;font-size:13px}
+.ln-leg{display:flex;gap:12px;font-size:11px;color:var(--label2);flex-wrap:wrap}.ln-leg span{display:flex;align-items:center;gap:4px}.ln-leg i{width:12px;height:3px;display:inline-block}
+.ln-side .gh{font-size:12px;color:var(--label2);margin-top:14px;margin-bottom:4px}
+.ln-why{font-size:14px;line-height:1.35;display:flex;flex-direction:column;gap:3px}
+.ln-opts{margin:0 12px!important;border-radius:14px;background:#F5F5F7;overflow:hidden;display:flex;flex-direction:column}
+.lo{min-height:46px;padding:0 12px;border:none;border-top:.5px solid var(--sep);background:transparent;display:flex;align-items:center;gap:10px;font-size:14px;text-align:left}
+.lo:first-child{border-top:none}.lo span{flex:1;min-width:0;padding:10px 0;line-height:1.25}.lo b{font-size:13px;white-space:nowrap}.lo i{width:18px;display:flex;justify-content:center}
+.ln-foot{margin-top:auto;padding:14px 12px 14px;display:flex;flex-direction:column;gap:8px;align-items:stretch;position:sticky;bottom:0;background:linear-gradient(rgba(255,255,255,0),#fff 14px)}
+.ln-foot .cta{margin:0!important;width:100%;height:auto;min-height:48px;padding:8px 14px;line-height:1.25;border-radius:14px;border:none;font-size:16px;font-weight:600}
+.ln-foot .link{align-self:center}
+.ln-none{margin:auto!important;padding:40px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.ibx-tabs{margin:0 6px 6px}
+.ibx{border-radius:14px;background:#fff;border:1.5px solid rgba(60,60,67,.10);margin:0 6px 6px}
+.ibx.sel{background:#EEF5FF;border-color:#0A84FF}
+.ibx-main{width:100%;padding:12px 12px 8px;border:none;background:transparent;display:flex;gap:12px;align-items:center;text-align:left}
+.ring{position:relative;width:44px;height:44px;flex-shrink:0}.ring>span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.ring b{font-size:14px}.ring i{font-size:9px;color:var(--label2);font-style:normal}
+.ibx-t{display:flex;flex-direction:column;gap:3px;min-width:0}.ibx-h{display:flex;align-items:center;gap:6px;font-size:14px}
+.ibx-c{font-size:13px;color:#3A3A3C;line-height:1.3}
+.ibx-a{display:flex;gap:6px;padding:0 12px 12px 68px;min-width:0;align-items:center;font-size:12px}
+.ibx-a.ok{color:var(--green-t);font-weight:600}
+.ibx-a .acc{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;height:30px;padding:0 10px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:600}
+.ibx-a .snz{flex-shrink:0;height:30px;padding:0 10px;border-radius:8px;border:none;background:var(--fill);color:#0066CC;font-size:13px;font-weight:500}
+.ibx-keys{display:flex;flex-wrap:wrap;gap:10px;padding:8px 12px;font-size:12px;color:var(--label2)}.ibx-keys b{color:#3A3A3C}
+.ibx-empty{display:flex;flex-direction:column;align-items:center;gap:6px}
+.sticon{display:flex;flex-shrink:0}.sticon.high svg{animation:beat 1.6s ease-in-out infinite}
+@media (max-width:1100px){#lines{padding-left:332px;grid-template-columns:minmax(0,1fr)}.ln-side{display:none}}
+.kind{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:2px 7px;border-radius:6px}
+.nw{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:var(--blue2);padding:2px 6px;border-radius:5px}
+.ei{vertical-align:-1px;margin-right:3px}
+.ibx.done{opacity:.8}.ibx.done .ibx-main{padding:10px 12px}
+.ln-body{margin:12px 0 0!important}.ln-body .group{margin:0 0 10px;background:#F5F5F7}.ln-body .gh{margin:12px 2px 6px}.ln-body .warn{margin:-4px 2px 10px}
+.ln-foot .cta+.cap{padding:0}
+body.view-lines #demoStrip,body.view-bi #demoStrip{display:none!important}
+.ln-arch{display:inline-flex;align-items:center;gap:6px;margin-left:8px;padding:2px 8px;border-radius:6px;background:#EDEBFF;color:#3634A3;font-size:12px;font-weight:600}
+.vd.nogps{background:#fff;border:2px dashed #AEAEB2;box-shadow:none;color:#8E8E93;font-size:11px;font-weight:700}
+.vd.nogps span{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:600;color:#6E6E73;background:#F2F2F7;padding:1px 5px;border-radius:4px}
+.vd.nogps.sel{border-color:#0A84FF}
+.track{margin-top:8px}
+#tour .tl .tk0{width:18px;height:14px;flex-shrink:0;background:linear-gradient(#C7C7CC,#C7C7CC) center/2px 100% no-repeat}
+#tour .tl .vd0{width:18px;height:18px;border-radius:50%;background:#34C759;box-shadow:22px 0 0 -2px #fff,22px 0 0 0 #8E8E93;margin-right:26px;flex-shrink:0}
+#tour .tl .ng0{width:18px;height:18px;border-radius:50%;border:2px dashed #AEAEB2;font:700 10px var(--sf);color:#8E8E93;display:flex;align-items:center;justify-content:center;font-style:normal;flex-shrink:0}
+.tile.rep{display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap;margin:0 24px 16px}
+.tile.rep h3{margin:0 0 4px}.rep-b{display:flex;gap:8px;flex-wrap:wrap}
+.btn2{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:10px;background:var(--blue);color:#fff;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap}
+.btn2.sec{background:var(--fill);color:var(--blue2)}
+.li .v{min-width:0;overflow-wrap:anywhere}.li .k{max-width:45%}
+.ln-hl,.ibx-c,.c-hero .big,#lnInc .sub,.ln-why,.rb-f span{overflow-wrap:anywhere}
+.ibx-t{flex:1}
+.ibx-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;padding:0 4px;font-size:12px;white-space:nowrap;overflow:hidden}
+.ibx-tabs .cnt{flex-shrink:0;min-width:18px;height:16px;padding:0 4px;border-radius:8px;background:var(--fill);font-size:11px;font-weight:600;line-height:16px}
+#lnFoot{position:static;background:none;padding:14px 18px 16px}
+.ln-body{margin:12px 18px 0!important}
+#lnMini.muted .leaflet-tile-pane{opacity:.62}#lnMini:not(.muted) .leaflet-tile-pane{opacity:1}
+#lnMini.muted [class*="ground-pane"]{opacity:.62}
+#lnInc>#lnMiniBox{margin:10px 12px 0}
+.dflt{display:flex;gap:6px;flex-wrap:wrap;margin:0 6px 8px}
+.dflt button{height:26px;padding:0 9px;border-radius:13px;border:none;background:var(--fill2);font-size:12px;color:var(--label2);white-space:nowrap}
+.dflt button b{font-weight:600;margin-left:2px}.dflt button.on{background:var(--blue2);color:#fff}
+.dst{font-size:12px;font-weight:600;color:#946200}.dst.ok{color:var(--green-t)}
+.ibx-main{color:var(--label)}
+.li .v .vv{display:block;font-weight:400;margin-top:2px}
+.li.note{font-size:12px;color:var(--label2);line-height:1.4}
+.rb.offtrip{opacity:.72}.vd.off{border-style:solid;border-color:#C7C7CC;background:#F2F2F7}
+.ring b{font-size:13px;line-height:1.05}.ring i{font-size:8px;line-height:1}
+.rb-h .kind{white-space:nowrap}
+.rb-f span:nth-child(2){flex:1;max-width:none;text-align:center}
+.vd.nogps.edge-l span{left:-8px;transform:none}.vd.nogps.edge-r span{left:auto;right:-8px;transform:none}
+.dsrow{width:100%;display:flex;align-items:center;gap:10px;padding:11px 14px;border:none;background:transparent;text-align:left;font-size:14px}
+.dsrow+.dsrow{border-top:.5px solid var(--sep)}.dsrow>span{flex:1;display:flex;flex-direction:column;gap:2px}.dsrow.on b{color:var(--blue2)}
+.rb-h{flex-wrap:wrap;row-gap:4px}.rb-n{flex:1 1 180px}
+.sh-body .li.sl{align-items:center}.sh-body .li.sl>span{display:flex;flex-direction:column;gap:2px}
+.sh-body .li.sl .cap{font-size:12px}
+/* ---------- узкие окна: без горизонтальной прокрутки ---------- */
+@media (max-width:1100px){
+  body.card-open .legend{display:none}  /* карточка — нижний лист, легенда всё равно под ней */
+  #demoStrip,#banner,#toast,body.card-open #demoStrip,body.card-open #banner,body.card-open #toast{left:332px;right:16px;width:fit-content;margin:0 auto;transform:none;white-space:normal}
+  #bi th{white-space:normal}#bi .tile:has(>table){overflow-x:auto}
+  .bi-head{flex-wrap:wrap}
+  .legend{left:332px;right:76px;width:fit-content;margin:0 auto;transform:none;flex-wrap:wrap;row-gap:4px}
+}
+@media (max-width:600px){
+  #side{left:8px;right:8px;top:8px;bottom:auto;width:auto;height:48vh;border-radius:18px}
+  #lines{padding:calc(48vh + 16px) 8px 8px}
+  #bi{left:8px;right:8px;top:calc(48vh + 16px);bottom:8px;border-radius:18px}
+  #card{left:8px;right:8px;top:calc(48vh + 16px);bottom:8px;height:auto}body.card-open #demoStrip{display:none!important}  /* карточка — под панелью */
+  #sys{left:8px;right:8px;width:auto}
+  .legend{left:8px;right:68px;bottom:8px;margin:0 auto;transform:none}
+  #demoStrip,#banner,body.card-open #demoStrip,body.card-open #banner{left:8px;right:8px;top:calc(48vh + 16px)}body.is-demo #banner{top:calc(48vh + 58px)}
+  #toast,body.card-open #toast{left:8px;right:8px;bottom:16px}
+  .bi-head{padding:16px 16px 8px}.bi-grid{padding:8px 12px 16px}.tile.rep{margin:0 12px 12px}
+  #biPeriod{width:100%!important;margin-right:0!important}
+  .s2,.s3,.s4,.s6,.s8{grid-column:span 12}
+}
+.recs .rec{display:flex;gap:10px;padding:10px 14px;align-items:flex-start}.recs .rec+.rec{border-top:.5px solid var(--sep)}
+.rec .rn{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--blue2);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.rec .rt{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:14px}.rec .rt b{font-weight:600}
+.rec .re{font-size:12px;font-weight:600;color:var(--label2)}.rec .re.ok{color:var(--green-t)}
+.brand .pill{padding:0 8px;font-size:11px;flex-shrink:0}.brand>div{min-width:0}.brand .nm{font-size:16px;overflow:hidden;text-overflow:ellipsis}
+#card{flex-direction:column}#card>*{flex-shrink:0}  /* карточка на всю высоту: действия прижаты к низу */
+</style>
+</head>
+<body>
+<div id="ymap" class="muted" aria-hidden="true"></div>
+<div id="map" class="muted" aria-label="Карта маршрутной сети"></div>
+<div id="banner" role="status"><i></i><span id="bannerText"></span></div>
+<div id="demoStrip" role="status"><b id="demoTag">Архив</b><span id="demoText">архив телеметрии 06.01.2026 — не текущая обстановка в городе</span></div>
+
+<aside id="side" class="glass" aria-label="Панель диспетчера">
+  <div class="side-head">
+    <div class="brand">
+      <img src="/static/logo-pulse.svg" alt="">
+      <div><div class="nm">Пульс маршрута</div><div class="cl" id="clock">ожидание потока</div></div>
+      <button class="pill" id="status" aria-haspopup="dialog" title="Состояние системы"><i></i><span>—</span></button>
+    </div>
+    <div class="segctl" role="tablist" aria-label="Вид"><button data-v="map" class="on" role="tab">Карта</button><button data-v="lines" role="tab">Ленты</button><button data-v="bi" role="tab">Аналитика</button></div>
+    <div class="hero" id="hero"></div>
+    <div class="stats">
+      <div class="stat" title="Новые события: ещё никто не принял в работу"><b id="sNew">—</b><span>новые</span></div>
+      <div class="stat" title="Принятые в работу: срочность сохраняется до проезда остановки"><b id="sWork">—</b><span>в работе</span></div>
+      <div class="stat" title="ТС без свежей телеметрии: это не «всё в порядке», а отсутствие данных"><b id="sStale">—</b><span id="sStaleL">без свежих данных</span></div>
+    </div>
+    <label class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#86868B" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>
+      <input type="search" id="q" aria-label="Поиск (Ctrl+K)" placeholder="ТС, борт или остановка"></label>
+    <div class="segctl" id="flt" role="group" aria-label="Фильтр"><button data-f="all" class="on">Все</button><button data-f="risk">Под риском</button><button data-f="stale">Без связи</button></div>
+  </div>
+  <div id="list" role="list"></div>
+  <div class="side-foot">
+    <button class="link" id="srcBtn" title="Источник данных и скорость воспроизведения">Архив 06.01 · ×1</button>
+    <button id="acct" aria-haspopup="dialog" title="Настройки"><span class="ava" id="avaS">—</span><span id="userS">—</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86868B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+</aside>
+
+<div id="sys" class="glass" role="dialog" aria-label="Состояние системы"></div>
+<div id="settings" role="dialog" aria-modal="true" aria-label="Настройки"><div class="sheet" id="sheet"></div></div>
+<div id="tour" role="dialog" aria-label="Обучение"><div class="spot" id="tSpot"></div><div class="tip" id="tTip"></div></div>
+<aside id="card" class="glass" aria-label="Карточка ТС"></aside>
+<section id="bi" aria-label="Аналитика"></section>
+<section id="lines" aria-label="Ленты маршрутов">
+  <div class="ln-main">
+    <div class="ln-top"><div><h2>Ленты маршрутов</h2><span class="sub" id="lnSub">&nbsp;</span></div>
+      <div class="ln-leg0"><span><i style="width:10px;height:10px;border-radius:50%;background:var(--green)"></i>ТС сейчас</span>
+        <span><i style="width:10px;height:10px;border-radius:50%;border:1.5px dashed #8E8E93"></i>где должен быть по графику</span>
+        <span><i style="width:16px;height:6px;border-radius:3px;background:rgba(255,204,0,.55)"></i>сбились в пару</span>
+        <span><i style="width:2px;height:10px;background:#C7C7CC"></i>остановка</span></div></div>
+    <div id="lnRows"></div>
+  </div>
+  <aside class="ln-side" id="lnSide" aria-label="Выбранное событие"><div id="lnInc"></div>
+    <div id="lnMiniBox"><div class="gh">Где сейчас</div><div id="lnMini" aria-label="Карта: положение машины"></div><div id="lnMiniNote" class="cap"></div></div>
+    <div id="lnFoot" class="ln-foot"></div></aside>
+</section>
+
+<div id="ctl" class="glass" role="group" aria-label="Управление картой">
+  <button id="zin" aria-label="Приблизить"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button><hr>
+  <button id="zout" aria-label="Отдалить"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></button><hr>
+  <button id="fitBtn" aria-label="Показать всю сеть" title="Вся сеть"><svg width="18" height="18" viewBox="0 0 24 24" fill="#007AFF" stroke="#007AFF" stroke-width="1.6" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2z"/></svg></button><hr>
+  <button id="layersBtn" aria-label="Подложка карты" title="Подложка: приглушённая / стандартная OSM"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 8 12 13l9.5-5L12 3z"/><path d="m2.5 12.5 9.5 5 9.5-5"/><path d="m2.5 17 9.5 5 9.5-5"/></svg></button>
+</div>
+<div class="legend glass" id="legend" aria-hidden="true"><span><i style="background:var(--green)"></i>По графику</span><span><i style="background:var(--yellow)"></i>Может опоздать</span><span><i style="background:var(--red)"></i>Скорее всего опоздает</span><span><i style="background:#5E5CE6"></i>Раньше плана</span><span><i style="background:#AEAEB2"></i>Нет данных</span></div>
+<div id="toast" role="status"><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#34C759"/><path d="m7 12.5 3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div style="display:flex;flex-direction:column"><b id="toastT" style="font-size:14px"></b><span id="toastS" class="cap"></span></div></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const RISK = {
+  red:    {fill:'#FF3B30', fg:'#fff', text:'#D70015', bg:'#FFECEB', tag:'Высокий риск'},
+  yellow: {fill:'#FFCC00', fg:'#1D1D1F', text:'#946200', bg:'#FFF6D6', tag:'Может опоздать'},
+  early:  {fill:'#5E5CE6', fg:'#fff', text:'#3634A3', bg:'#EDEBFF', tag:'Раньше плана'},
+  green:  {fill:'#34C759', fg:'#fff', text:'#248A3D', bg:'#E9F7EE', tag:'По графику'},
+  none:   {fill:'#8E8E93', fg:'#fff', text:'#6E6E73', bg:'#F2F2F7', tag:'Нет прогноза'},
+};
+const S = {lastPos:{}, state:null, routes:null, sel:null, filter:'all', q:'', follow:null, whatif:{}, applied:{}, opt:0, view:'map',
+           seen:new Set(), fresh:new Set(), autoPicked:false, warm:false, cardKey:null, listHtml:'', selKey:null, routeStyleKey:{}};
+
+// ---------- карта ----------
+const map = L.map('map', {zoomControl:false, preferCanvas:true}).setView([55.75, 37.62], 11);
+map.attributionControl.setPrefix(false);  // без ссылки на Leaflet; «© OpenStreetMap» оставляем — этого требует лицензия OSM
+const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
+$('#layersBtn').onclick = () => { applyMuted(!S.muted); saveSettings(); };
+$('#zin').onclick = () => V.zoomBy(1); $('#zout').onclick = () => V.zoomBy(-1); $('#fitBtn').onclick = () => fitAll();
+const LL = {route: L.layerGroup().addTo(map), stops: L.layerGroup().addTo(map), labels: L.layerGroup().addTo(map),
+            sel: L.layerGroup().addTo(map), slice: L.layerGroup().addTo(map), veh: L.layerGroup().addTo(map)};
+const routeLines = {}, markers = {};
+let allStops = [];
+
+// ---------- MapView: один интерфейс для OpenStreetMap (Leaflet) и Яндекс Карт (API 2.1) ----------
+const LView = {
+  kind: 'osm',
+  polyline(ll, st, layer = 'route') {
+    const l = L.polyline(ll, {color: st.color, weight: st.weight, opacity: st.opacity, lineCap:'round', lineJoin:'round', interactive:false}).addTo(LL[layer]);
+    return {setStyle: (x) => l.setStyle({color: x.color, weight: x.weight, opacity: x.opacity}), front: () => l.bringToFront(), remove: () => l.remove(),
+            bounds: () => { const b = l.getBounds(); return [[b.getSouth(), b.getWest()], [b.getNorth(), b.getEast()]]; }};
+  },
+  dot(ll, st, hint, layer) {
+    L.circleMarker(ll, {radius: st.r, color: st.color, weight: st.w, fillColor:'#fff', fillOpacity:1})
+      .bindTooltip(esc(hint), {direction:'top', offset:[0, -4], className:'stop-tip'}).addTo(LL[layer]);
+  },
+  label(ll, text, layer) { L.tooltip({permanent:true, direction:'right', offset:[6, 0], className:'stop-label', interactive:false}).setLatLng(ll).setContent(esc(text)).addTo(LL[layer]); },
+  marker(ll, html, o = {}) {
+    const mk = (h) => L.divIcon({html: h, className: o.cls || '', iconSize:[0, 0]});
+    const m = L.marker(ll, {keyboard:false, interactive: !!o.onClick, icon: mk(html), zIndexOffset: o.z || 0}).addTo(LL[o.layer || 'veh']);
+    if (o.onClick) m.on('click', o.onClick);
+    let h = html;
+    return {el: () => m.getElement(), move: (p) => m.setLatLng(p), html: (nh) => { if (nh !== h) { m.setIcon(mk(nh)); h = nh; } }, z: (n) => m.setZIndexOffset(n),
+            opacity: (x) => m.setOpacity(x), remove: () => m.remove()};
+  },
+  clear(layer) { LL[layer].clearLayers(); },
+  fit(b, tl, br, maxZoom) { map.fitBounds(b, {paddingTopLeft: tl, paddingBottomRight: br, maxZoom}); },
+  pan(p) { map.panTo(p, {animate:true, duration:.8}); },
+  zoomBy(d) { d > 0 ? map.zoomIn() : map.zoomOut(); },
+  zoom() { return map.getZoom(); },
+  center() { const c = map.getCenter(); return [c.lat, c.lng]; },
+  inView() { const b = map.getBounds().pad(.1); return (p) => b.contains(p); },
+  px(p) { return map.latLngToContainerPoint(p); },
+  padL() { return [372, 60]; },
+};
+
+function makeYView(center, zoom) {
+  const ym = new ymaps.Map('ymap', {center, zoom, controls:[]}, {suppressMapOpenBlock:true, yandexMapDisablePoiInteractivity:true});
+  const col = {}, Z = {route:100, stops:200, labels:210, sel:300, slice:350, veh:400};
+  Object.keys(Z).forEach(k => { col[k] = new ymaps.GeoObjectCollection(); ym.geoObjects.add(col[k]); });
+  const HtmlLayout = ymaps.templateLayoutFactory.createClass('<div style="position:absolute;left:0;top:0;opacity:$[properties.op]">$[properties.html]</div>');
+  const LabLayout = ymaps.templateLayoutFactory.createClass('<div class="ylab">{{ properties.text }}</div>');
+  const dotImg = (r, c, w) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${2 * (r + w)}" height="${2 * (r + w)}"><circle cx="${r + w}" cy="${r + w}" r="${r}" fill="#fff" stroke="${c}" stroke-width="${w}"/></svg>`);
+  return {
+    kind: 'yandex', ym,
+    polyline(ll, st, layer = 'route') {
+      const p = new ymaps.Polyline(ll, {}, {strokeColor: st.color, strokeWidth: st.weight, strokeOpacity: st.opacity, interactivityModel:'default#transparent', zIndex: Z[layer]});
+      col[layer].add(p);
+      let last = '';
+      return {setStyle: (x) => { const k = JSON.stringify(x); if (k !== last) { p.options.set({strokeColor: x.color, strokeWidth: x.weight, strokeOpacity: x.opacity}); last = k; } },
+              front: () => p.options.set('zIndex', Z[layer] + 50), remove: () => col[layer].remove(p), bounds: () => p.geometry.getBounds()};
+    },
+    dot(ll, st, hint, layer) {
+      const d = st.r + st.w;
+      col[layer].add(new ymaps.Placemark(ll, {hintContent: hint}, {iconLayout:'default#image', iconImageHref: dotImg(st.r, st.color, st.w), iconImageSize:[2 * d, 2 * d], iconImageOffset:[-d, -d], zIndex: Z[layer]}));
+    },
+    label(ll, text, layer) { col[layer].add(new ymaps.Placemark(ll, {text}, {iconLayout: LabLayout, iconOffset:[8, -8], interactivityModel:'default#silent', zIndex: Z[layer]})); },
+    marker(ll, html, o = {}) {
+      const layer = o.layer || 'veh';
+      const pm = new ymaps.Placemark(ll, {html, op: 1}, {iconLayout: HtmlLayout, iconShape: {type:'Circle', coordinates:[0, 0], radius:18},
+        interactivityModel: o.onClick ? 'default#geoObject' : 'default#silent', zIndex: Z[layer] + (o.z || 0), cursor: o.onClick ? 'pointer' : 'default'});
+      if (o.onClick) pm.events.add('click', o.onClick);
+      col[layer].add(pm);
+      let h = html, zz = o.z || 0, op = 1, pos = ll;
+      // обновляем объекты Яндекса только при реальном изменении — иначе он перестраивает вёрстку метки
+      return {move: (p) => { if (p[0] !== pos[0] || p[1] !== pos[1]) { pm.geometry.setCoordinates(p); pos = p; } },
+              html: (nh) => { if (nh !== h) { pm.properties.set('html', nh); h = nh; } },
+              z: (n) => { if (n !== zz) { pm.options.set('zIndex', Z[layer] + n); zz = n; } },
+              opacity: (x) => { if (x !== op) { pm.properties.set('op', x); op = x; } }, remove: () => col[layer].remove(pm)};
+    },
+    clear(layer) { col[layer].removeAll(); },
+    fit(b, tl, br, maxZoom) {
+      ym.setBounds(b, {checkZoomRange:true, zoomMargin:[tl[1], br[0], br[1], Math.max(0, tl[0] - 372)], duration:300})
+        .then(() => { if (maxZoom && ym.getZoom() > maxZoom) ym.setZoom(maxZoom); });
+    },
+    pan(p) { ym.panTo(p, {duration:500}); },
+    zoomBy(d) { ym.setZoom(ym.getZoom() + d, {duration:200}); },
+    zoom() { return ym.getZoom(); },
+    center() { return ym.getCenter(); },
+    inView() { const b = ym.getBounds(); return ([la, lo]) => la >= b[0][0] && la <= b[1][0] && lo >= b[0][1] && lo <= b[1][1]; },
+    px(p) { const g = ym.options.get('projection').toGlobalPixels(p, ym.getZoom()), c = ym.getGlobalPixelCenter(), sz = ym.container.getSize();
+            return {x: g[0] - c[0] + sz[0] / 2, y: g[1] - c[1] + sz[1] / 2}; },
+    padL() { return [392, 60]; },
+    destroy() { ym.destroy(); },
+  };
+}
+let V = LView;
+const distM = (a, b) => { const k = Math.cos(a[0] * Math.PI / 180); return Math.hypot(a[0] - b[0], (a[1] - b[1]) * k) * 111000; };
+
+const padL = () => [V.padL()[0] + (S.sel && S.view === 'map' ? 472 : 0), 60], padR = () => [80, 60];  // карточка открывается рядом с панелью
+function fitAll() {
+  let b = null;
+  const ext = (p) => { if (!b) b = [[p[0], p[1]], [p[0], p[1]]]; else { b[0][0] = Math.min(b[0][0], p[0]); b[0][1] = Math.min(b[0][1], p[1]); b[1][0] = Math.max(b[1][0], p[0]); b[1][1] = Math.max(b[1][1], p[1]); } };
+  Object.values(routeLines).forEach(ls => ls.forEach(l => { const bb = l.bounds(); if (bb) { ext(bb[0]); ext(bb[1]); } }));
+  (S.state?.vehicles || []).forEach(v => { if (v.lat != null) ext([v.lat, v.lon]); });
+  if (b) V.fit(b, padL(), padR());
+}
+// стартовый вид: по текущим машинам (ближе, чем вся сеть)
+function fitVehicles() {
+  const vs = (S.state?.vehicles || []).filter(v => v.lat != null); if (!vs.length) return;
+  const la = vs.map(v => v.lat), lo = vs.map(v => v.lon);
+  V.fit([[Math.min(...la) - .01, Math.min(...lo) - .015], [Math.max(...la) + .01, Math.max(...lo) + .015]], padL(), padR(), 13);
+}
+const ROUTE_STYLE = {
+  base:  {casing: {color:'#FFFFFF', weight:6, opacity:.85}, line: {color:'#8E8E93', weight:3, opacity:.75}},
+  dim:   {casing: {color:'#FFFFFF', weight:5, opacity:.35}, line: {color:'#AEAEB2', weight:2.5, opacity:.35}},
+  sel:   {casing: {color:'#FFFFFF', weight:10, opacity:1},  line: {color:'#0A84FF', weight:6, opacity:1}},
+};
+// каждый кусок маршрута — две линии, как в навигаторе: белая «обводка» и цветная линия поверх
+function mkRouteLine(p) {
+  const c = V.polyline(p, ROUTE_STYLE.base.casing), m = V.polyline(p, ROUTE_STYLE.base.line);
+  return {setStyle: (st) => { c.setStyle(st.casing); m.setStyle(st.line); }, front: () => { c.front(); m.front(); }, bounds: () => m.bounds(), remove: () => { c.remove(); m.remove(); }};
+}
+// у каждой машины — линия рейса, который она выполняет сейчас по расписанию (путь по дорогам через его остановки)
+function syncRouteLines(vs) {
+  for (const v of vs || []) {
+    const r = S.routes?.[v.tr_id]; if (!r) continue;
+    const want = v.pattern && r.patterns?.[v.pattern] ? v.pattern : 'track';
+    const cur = routeLines[v.tr_id];
+    if (cur && cur.pid === want) continue;
+    if (cur) cur.forEach(l => l.remove());
+    const pts = want === 'track' ? r.track?.[0] : r.patterns[want];
+    if (!pts || pts.length < 2) { delete routeLines[v.tr_id]; continue; }
+    const arr = [mkRouteLine(pts)]; arr.pid = want; arr.pts = pts;
+    routeLines[v.tr_id] = arr; delete S.routeStyleKey[v.tr_id];
+  }
+}
+function buildRoutes() {
+  V.clear('route');
+  for (const k of Object.keys(routeLines)) delete routeLines[k];
+  S.routeStyleKey = {};
+  syncRouteLines(S.state?.vehicles);
+}
+async function loadRoutes() {
+  const r = await fetch('/api/routes'); if (r.status === 401) { location.href = '/login'; return; }
+  S.routes = await r.json();
+  const uniq = new Map();
+  for (const rt of Object.values(S.routes)) rt.stops.forEach(s => { const k = s.lat.toFixed(4) + ',' + s.lon.toFixed(4); if (!uniq.has(k)) uniq.set(k, s); });
+  allStops = [...uniq.values()];
+  buildRoutes(); drawStops(); fitAll();
+}
+// остановки всех маршрутов: точки с 13-го зума, названия с 15-го (без наложений)
+function drawStops() {
+  V.clear('stops'); V.clear('labels');
+  const z = V.zoom(); if (z < 13) return;
+  const has = V.inView(), inView = allStops.filter(s => has([s.lat, s.lon]));
+  for (const s of inView) V.dot([s.lat, s.lon], {r: z >= 15 ? 4.5 : 3.5, color:'#6E6E73', w:1.5}, s.name || 'Остановка', 'stops');
+  if (z < 15 || inView.length > 300) return;
+  const taken = new Set(), named = [];
+  for (const s of inView) {
+    if (!s.name) continue;
+    if (named.some(n => n.name === s.name && distM([n.lat, n.lon], [s.lat, s.lon]) < 150)) continue;
+    const p = V.px([s.lat, s.lon]);
+    const cells = [0, 1].map(dx => `${Math.floor(p.x / 120) + dx}:${Math.floor(p.y / 18)}`);
+    if (cells.some(c => taken.has(c))) continue;
+    cells.forEach(c => taken.add(c)); named.push(s);
+    V.label([s.lat, s.lon], s.name, 'labels');
+  }
+}
+let stopsT; const drawStopsSoon = () => { clearTimeout(stopsT); stopsT = setTimeout(drawStops, 120); };
+map.on('zoomend moveend', () => { if (V === LView) drawStopsSoon(); });
+// ---------- формат ----------
+const mins = (s) => { const m = Math.abs(s) / 60; return m < 1 ? '<1 мин' : (m < 10 ? m.toFixed(1).replace('.', ',') : Math.round(m)) + ' мин'; };
+const sgn = (s) => (s >= 0 ? '+' : '−') + mins(s);
+const isSynth = () => S.state?.stream.dataset === 'synthetic';
+const srcShort = () => isSynth() ? 'Синтетика' : 'Архив 06.01';
+const hhmm = (ts) => new Date(ts * 1000).toISOString().slice(11, 16);
+const day = (ts) => { const d = new Date(ts * 1000).toLocaleDateString('ru-RU', {timeZone:'UTC', weekday:'long', day:'numeric', month:'long'}); return d[0].toUpperCase() + d.slice(1); };
+const short = (tr) => String(tr).slice(-3);
+const isRisk = (v) => !!v.incident && (v.risk === 'red' || v.risk === 'yellow' || v.risk === 'early');
+const isEarly = (v) => v.risk === 'early';
+const evKind = (v) => isEarly(v) ? 'Раньше плана' : 'Опоздание';
+// раннее прибытие — свой значок, а не только знак «минус»
+const evIcon = (v) => isEarly(v) ? '<svg class="ei" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"/></svg>' : '';
+const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) ? b : c; };
+const busIcon = (col, w = 14) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V6a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v10M6 11h12M6 16h12M8.5 16v3M15.5 16v3"/></svg>`;
+function matches(v) {
+  if (S.filter === 'risk' && !isRisk(v)) return false;
+  if (S.filter === 'stale' && !v.stale) return false;
+  if (S.q) { const i = v.incident, hay = [v.tr_id, v.unit_id, i?.segment?.from, i?.segment?.to].join(' ').toLowerCase(); if (!hay.includes(S.q.toLowerCase())) return false; }
+  return true;
+}
+const order = {red:0, yellow:1, early:2, green:3, none:4};
+const listed = () => S.state.vehicles.filter(matches).sort((a, b) => order[a.risk] - order[b.risk]
+  || (b.incident?.p_late ?? 0) - (a.incident?.p_late ?? 0) || (b.incident?.prediction_s ?? -1e9) - (a.incident?.prediction_s ?? -1e9) || a.tr_id - b.tr_id);
+
+// ---------- отрисовка (только то, что изменилось) ----------
+function render() {
+  const st = S.state; if (!st) return;
+  const s = st.stream, now = s.stream_time;
+  $('#clock').textContent = now ? `${day(now)} · ${hhmm(now)}` : 'ожидание потока';
+  const demo = s.source === 'demo';
+  const P = demo && s.status === 'live' ? [s.replay.speed > 1 ? `${isSynth() ? 'Синтетика' : 'Архив'} ×${s.replay.speed}` : (isSynth() ? 'Синтетика' : 'Архив'), '#EDEBFF', '#3634A3', '#5E5CE6']
+    : {live:['В эфире','#E9F7EE','#248A3D','#34C759'], offline:['Нет связи','#FFF6D6','#7A5200','#FF9F0A'], idle:['Нет потока','#F2F2F7','#6E6E73','#AEAEB2']}[s.status];
+  document.body.classList.toggle('is-demo', demo);  // не «demo»: так называется строка в подвале панели
+  $('#demoStrip').style.display = demo ? 'flex' : 'none';
+  if (demo) $('#demoTag').textContent = isSynth() ? 'Синтетика' : 'Архив';
+  if (demo) $('#demoText').textContent = `${isSynth() ? 'синтетические данные (3 машины на маршруте)' : 'архив телеметрии 06.01.2026'}${s.replay.speed > 1 ? ', ускорено ×' + s.replay.speed : ', в реальном времени'} — не текущая обстановка в городе`;
+  const pill = $('#status'); pill.className = 'pill ' + s.status; pill.style.background = P[1]; pill.style.color = P[2]; pill.querySelector('i').style.background = P[3]; pill.querySelector('span').textContent = P[0];
+  const banner = st.ml.status === 'degraded' ? 'ML-модуль недоступен · прогноз по последнему известному отклонению'
+    : s.status === 'offline' ? 'Нет связи с потоком NDTP · показываем последнее известное состояние' : '';
+  $('#banner').style.display = banner ? 'flex' : 'none'; $('#bannerText').textContent = banner;
+  trackEvents();
+  const risky = st.vehicles.filter(isRisk), reds = risky.filter(v => v.risk === 'red').length, early = risky.filter(isEarly).length, lateN = risky.length - early, k = st.kpi;
+  document.title = risky.length ? `(${risky.length}) Пульс маршрута` : 'Пульс маршрута';
+  setHtml($('#hero'), s.status === 'idle'
+    ? `${statusIcon('calm')}<div class="t"><b>Поток не запущен</b><span class="sub">Ждём телеметрию: архив или поток NDTP запустится автоматически</span></div>`
+    : risky.length
+      ? `${statusIcon(netLevel())}<span class="n" style="color:${reds ? '#D70015' : lateN ? '#946200' : '#3634A3'}">${risky.length}</span><div class="t"><b>${plural(risky.length, 'событие', 'события', 'событий')} в ближайшие 10–15 мин</b><span class="sub">${[lateN ? lateN + ' ' + plural(lateN, 'опоздание', 'опоздания', 'опозданий') + (reds ? ` (${reds} высокий риск)` : '') : '', early ? early + ' раньше плана' : ''].filter(Boolean).join(' · ')}</span></div>`
+      : `${statusIcon(netLevel())}<div class="t"><b>Активных предупреждений нет</b><span class="sub">${k.no_forecast ? k.no_forecast + ' ТС без прогноза' : 'Все ТС идут по графику'}</span></div>`);
+  { const it = inboxItems(); $('#sNew').textContent = it.fresh.length; $('#sWork').textContent = it.work.length;
+    $('#sStale').textContent = k.stale ?? '—'; $('#sStaleL').textContent = 'нет данных'; $('#sStaleL').parentNode.title = `ТС без свежей телеметрии (из ${k.total}): это не «всё в порядке», а отсутствие данных`; }
+  S.speed = s.replay.speed || S.speed;
+  $('#srcBtn').textContent = demo ? `${srcShort()} · ×${S.speed}` : 'Живой поток NDTP';
+  for (const v of risky) { const id = v.incident.sample_id; if (!S.seen.has(id)) { S.seen.add(id); if (S.warm && v.risk === 'red') S.fresh.add(id); } }
+  if (S.fresh.size && S.sound) chime();
+  S.warm = true;
+  const rows = listed();
+  if (!S.sel && !S.autoPicked && rows.length && isRisk(rows[0])) { S.sel = rows[0].tr_id; S.autoPicked = true; }
+  const html = S.view === 'lines' ? inboxHtml() : rows.length ? rows.map(rowHtml).join('') : emptyHtml(s);
+  if (html !== S.listHtml) { $('#list').innerHTML = html; S.listHtml = html; }
+  S.fresh.clear();
+  const byId = Object.fromEntries(st.vehicles.map(v => [v.tr_id, v]));
+  syncRouteLines(st.vehicles); styleRoutes(byId); drawVehicles(st.vehicles);
+  if (S.follow && byId[S.follow]?.lat != null) V.pan([byId[S.follow].lat, byId[S.follow].lon]);
+  if (S.sel && !S.follow) keepInView(byId[S.sel]);
+  if (!S.fitted && st.vehicles.some(v => v.lat != null)) { S.fitted = true; fitVehicles(); }
+  renderCard(S.view === 'map' ? byId[S.sel] : null);
+  renderLines();
+  if ($('#sys').style.display === 'block') renderSys();
+}
+function setHtml(el, h) { if (el._h !== h) { el.innerHTML = h; el._h = h; } }
+
+function styleRoutes(byId) {
+  for (const [tr, lines] of Object.entries(routeLines)) {
+    const v = byId[tr], isSel = +tr === S.sel, vis = v && matches(v);
+    // цвет риска на маршруте: линия текущего рейса окрашена так же, как метка его ТС
+    const rk = v && !v.stale && v.incident ? v.risk : 'none';
+    const key = `${isSel}|${vis}|${rk}`;
+    if (S.routeStyleKey[tr] === key) continue;
+    S.routeStyleKey[tr] = key;
+    const base = rk === 'none' ? ROUTE_STYLE.base : {casing: ROUTE_STYLE.base.casing, line: {color: RISK[rk].fill, weight: rk === 'red' ? 4 : 3.5, opacity: .85}};
+    lines.forEach(l => l.setStyle(isSel ? ROUTE_STYLE.sel : vis ? base : ROUTE_STYLE.dim));
+    if (isSel) lines.forEach(l => l.front());
+  }
+}
+
+function vehHtml(v, isSel) {
+  const c = RISK[v.stale ? 'none' : v.risk], hot = isRisk(v);
+  const lbl = hot ? `<span class="lbl">${short(v.tr_id)} <b>${isEarly(v) ? 'раньше ' + mins(v.incident.prediction_s) : sgn(v.incident.prediction_s)}</b></span>` : isSel ? `<span class="lbl">ТС ${v.tr_id}</span>` : '';
+  return `<div class="vm ${isSel ? 'sel' : ''} ${hot && v.risk === 'red' ? 'hot' : ''} ${v.stale ? 'stale' : ''}" style="--c:${c.fill};--t:${c.text}">
+    <div class="halo"></div>${v.heading != null ? `<div class="rot" style="transform:rotate(${Math.round(v.heading / 10) * 10}deg)"></div>` : ''}<div class="disc">${busIcon(c.fg, isSel ? 16 : 13)}</div>${lbl}</div>`;
+}
+function drawVehicles(vs) {
+  const seen = new Set();
+  for (const v of vs) {
+    if (v.lat == null) continue;  // нет координат — только в списке «Без связи»
+    seen.add(v.tr_id);
+    const isSel = v.tr_id === S.sel, html = vehHtml(v, isSel), z = isSel ? 1000 : isRisk(v) ? 500 : 0;
+    let m = markers[v.tr_id];
+    if (!m) { const tr = v.tr_id; m = markers[tr] = V.marker([v.lat, v.lon], html, {cls:'veh', z, onClick: () => select(tr, false)}); }
+    else {
+      // интервал между точками телеметрии в реальном времени (15 с / скорость воспроизведения) — едем плавно весь интервал
+      const prev = S.lastPos[v.tr_id], now = S.state.stream.stream_time;
+      if (prev && (prev.lat !== v.lat || prev.lon !== v.lon) && m.el) {
+        const dur = Math.min(20, Math.max(1.2, (now - prev.t) / (S.speed || 1)));
+        m.el()?.style.setProperty('--dur', dur.toFixed(1) + 's');
+      }
+      m.move([v.lat, v.lon]); m.html(html);
+    }
+    if (!S.lastPos[v.tr_id] || S.lastPos[v.tr_id].lat !== v.lat || S.lastPos[v.tr_id].lon !== v.lon) S.lastPos[v.tr_id] = {lat: v.lat, lon: v.lon, t: S.state.stream.stream_time};
+    m.z(z); m.opacity(matches(v) || isSel ? 1 : .6);
+  }
+  for (const id of Object.keys(markers)) if (!seen.has(+id)) { markers[id].remove(); delete markers[id]; }
+}
+
+function emptyHtml(s) {
+  if (s.status === 'idle') return '<div class="empty"><b>Нет данных</b>Запустите демо-поток: архив 06.01 проиграется как живой поток NDTP</div>';
+  if (S.q) return '<div class="empty"><b>Ничего не найдено</b>Попробуйте номер ТС, борта или адрес остановки</div>';
+  if (S.filter === 'risk') return '<div class="empty"><b>Рисков нет</b>Все машины идут по графику</div>';
+  if (S.filter === 'stale') return '<div class="empty"><b>Все на связи</b>Телеметрия приходит от всех ТС</div>';
+  return '<div class="empty">Нет ТС</div>';
+}
+function rowHtml(v) {
+  const c = RISK[v.risk], i = v.incident, isSel = v.tr_id === S.sel, r = isRisk(v);
+  const sub = v.no_data ? 'нет телеметрии с начала потока' : v.stale ? `нет связи ${Math.round(v.age_s / 60)} мин` : r ? `${S.ack[v.tr_id] ? '✓ в работе · ' : ''}${sn(i.target_name)}` : v.gps_unstable ? 'GPS нестабилен' : i ? 'по графику' : 'ждём прогноз';
+  const right = r ? `<span class="d" style="color:${c.text}">${evIcon(v)}${isEarly(v) ? 'раньше ' + mins(i.prediction_s) : sgn(i.prediction_s)}</span><span class="e">прибытие ${hhmm(i.forecast_arrival)}</span>` : `<span class="e">${v.no_data ? '—' : Math.round(v.speed) + ' км/ч'}</span>`;
+  return `<button class="row ${isSel ? 'sel' : ''} ${i && S.fresh.has(i.sample_id) ? 'new' : ''}" data-tr="${v.tr_id}" role="listitem">
+    <span class="dotb" style="background:${r ? c.fill : c.bg};color:${r ? c.fg : c.text}">${short(v.tr_id)}</span>
+    <span class="mid"><span class="t1">ТС ${v.tr_id}</span><span class="t2">${esc(sub)}</span></span><span class="end">${right}</span></button>`;
+}
+// один обработчик на весь список — клики не теряются при обновлении
+$('#list').addEventListener('click', (e) => {
+  const t = e.target.closest('[data-ib],[data-df],[data-acc],[data-snz],.ibx-main,.row'); if (!t) return;
+  if (t.dataset.df) { S.doneF = t.dataset.df; S.listHtml = ''; render(); }
+  else if (t.dataset.ib) { S.inboxTab = t.dataset.ib; S.listHtml = ''; render(); }
+  else if (t.dataset.acc) acceptAlert(+t.dataset.acc);
+  else if (t.dataset.snz) snoozeAlert(+t.dataset.snz);
+  else if (t.classList.contains('ibx-main')) lnSelect(+t.dataset.tr);
+  else select(+t.dataset.tr, true);
+});
+
+// ---------- карточка ----------
+function renderCard(v) {
+  const el = $('#card');
+  $('#ctl').classList.toggle('shift', !!v);
+  document.body.classList.toggle('card-open', !!v);
+  if (!v) { el.style.display = 'none'; V.clear('sel'); V.clear('slice'); S.cardKey = null; S.selKey = null; return; }
+  if (v.lat != null) drawSelection(v);
+  const i = v.incident, c = RISK[v.stale ? 'none' : v.risk], n = v.now || {};
+  const wi = i ? S.whatif[i.sample_id] : null, ak = S.ack[v.tr_id];
+  const key = JSON.stringify([v.tr_id, i?.sample_id, i?.eta_min, Math.round(v.speed), v.risk, v.stale, v.gps_unstable, wi, ak, S.follow, n, v.age_s, S.active[v.tr_id]?.since, S.done.length]);
+  if (key === S.cardKey) return;
+  S.cardKey = key; el.style.display = 'flex';
+  const p = i?.p_late, r = isRisk(v);
+  const ring = p == null || isEarly(v) ? '' : `<div style="position:relative;width:56px;height:56px;flex-shrink:0" title="Вероятность опоздания больше 2 минут">
+      <svg width="56" height="56" viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(120,120,128,.16)" stroke-width="7"/>
+      <circle cx="32" cy="32" r="27" fill="none" stroke="${c.fill}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${Math.round(p * 170)} 170" transform="rotate(-90 32 32)"/></svg>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="font-size:16px">${Math.round(p * 100)}%</b><span style="font-size:9px;color:var(--label2)">риск</span></div></div>`;
+  el.innerHTML = `
+  <div class="c-head"><span class="dotb" style="width:40px;height:40px;background:${c.fill};color:${c.fg}">${short(v.tr_id)}</span>
+    <div class="tt"><b>ТС ${v.tr_id}</b><span class="sub">Борт ${v.unit_id ?? '—'}${v.no_data ? ' · данных нет' : ' · ' + Math.round(v.speed) + ' км/ч'}${v.stale && !v.no_data ? ' · нет связи ' + Math.round(v.age_s / 60) + ' мин' : ''}</span></div>
+    <button class="x" id="closeCard" aria-label="Закрыть (Esc)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6E6E73" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="c-hero"><div class="l">${r || v.stale ? `<span class="tag" style="background:${c.bg};color:${c.text}">${evIcon(v)}${v.stale ? 'Нет связи' : c.tag}</span>` : ''}
+      <span class="big">${evHead(v)}</span>${i ? `<span class="sub">${r ? '' : 'следующая цель: '}${esc(sn(i.target_name))} · через ${i.eta_min} мин</span>` : ''}</div>${r ? ring : ''}</div>
+  ${i?.degraded ? '<div class="group"><div class="li" style="color:#7A5200">ML недоступен — прогноз по последнему отклонению</div></div>' : ''}
+  ${v.gps_unstable ? '<div class="group"><div class="li" style="color:#7A5200;font-size:13px">GPS нестабилен: координаты скачут, позиция на карте сглажена, прогноз менее надёжен</div></div>' : ''}
+  ${evFacts(v)}
+  ${evRecs(v)}${evWhy(v, c.fill)}
+  ${[n.deviation_s, n.segment_speed_kmh, n.dwell_min_of_10].every(x => x == null) ? '' : `<div class="gh">Сейчас (измерено по GPS)</div>
+  <div class="group now">
+    <div><b>${n.deviation_s == null ? '—' : sgn(n.deviation_s)}</b><span>отклонение</span></div>
+    <div><b>${n.segment_speed_kmh == null ? '—' : Math.round(n.segment_speed_kmh) + ' км/ч'}</b><span>скорость на сегменте</span></div>
+    <div><b>${n.dwell_min_of_10 == null ? '—' : String(n.dwell_min_of_10).replace('.', ',') + ' мин'}</b><span>простой за 10 мин</span></div></div>`}
+  ${evLog(v)}
+  <div class="cfoot">
+  ${evAck(v, 'cta')}
+  <div class="acts">
+    <button class="act ${S.follow === v.tr_id ? 'on' : ''}" id="aFollow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="5"/></svg>${S.follow === v.tr_id ? 'Слежу' : 'Следить'}</button>
+    <button class="act" id="aZoom" ${v.lat == null ? 'disabled style="opacity:.4"' : ''}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>Показать</button>
+    <button class="act" id="aWrong" ${i ? '' : 'disabled style="opacity:.4"'}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>Не так</button></div>
+  </div>`;
+  $('#closeCard').onclick = closeCard;
+  const cta = $('#cta');
+  if (cta) cta.onclick = () => S.ack[v.tr_id] ? unackEvent(v.tr_id) : ackEvent(v.tr_id);
+  $('#aFollow').onclick = () => { S.follow = S.follow === v.tr_id ? null : v.tr_id; post('/api/actions', {tr_id: v.tr_id, kind:'follow', detail:{on: !!S.follow}}); render(); };
+  if (v.lat != null) $('#aZoom').onclick = () => focusVehicle(v);
+  if (i) $('#aWrong').onclick = () => { post('/api/actions', {tr_id: v.tr_id, kind:'wrong_forecast', detail:{sample_id: i.sample_id}}); toast('Спасибо, отмечено', 'Случай попадёт в выборку для дообучения'); };
+}
+
+// выбранное ТС: остановки его маршрута + цель; перерисовка только при смене выбора/цели
+function nearestOn(line, lat, lon) {
+  let best = 1e18, bi = -1;
+  const k = Math.cos(lat * Math.PI / 180);
+  line.forEach(([a, b], j) => { const d = ((a - lat) ** 2 + ((b - lon) * k) ** 2); if (d < best) { best = d; bi = j; } });
+  return [bi, Math.sqrt(best) * 111000];
+}
+function drawSelection(v) {
+  const i = v.incident, key = `${v.tr_id}|${i?.sample_id}|${!!S.routes}|${V.kind}|${v.pattern}`;
+  if (key !== S.selKey) {
+    S.selKey = key; V.clear('sel');
+    (S.routes?.[v.tr_id]?.stops || []).forEach(s => V.dot([s.lat, s.lon], {r:5, color:'#3A3A3C', w:2.5}, s.name || 'Остановка', 'sel'));
+    if (i) V.marker([i.target_lat, i.target_lon], `<div class="stop-pin"><div class="h"><i></i></div><div class="lab"><b>Цель · ${hhmm(i.target_time_begin)}</b><span>${esc(i.segment.to)}</span></div></div>`, {layer:'sel', z:900});
+  }
+  // участок маршрута от ТС до цели — цветом риска (по нитке маршрута, не прямой)
+  const sk = `${key}|${v.risk}|${v.lat.toFixed(4)},${v.lon.toFixed(4)}`;
+  if (sk === S.sliceKey) return;
+  S.sliceKey = sk; V.clear('slice');
+  if (!i || !isRisk(v)) return;
+  for (const line of [routeLines[v.tr_id]?.pts || S.routes?.[v.tr_id]?.track?.[0]].filter(Boolean)) {
+    const [a, da] = nearestOn(line, v.lat, v.lon), [b, db] = nearestOn(line, i.target_lat, i.target_lon);
+    if (da < 250 && db < 250 && b > a) { V.polyline(line.slice(a, b + 1), {color: RISK[v.risk].fill, weight:6, opacity:.9}, 'slice'); break; }
+  }
+}
+
+function renderSys() {
+  const st = S.state, s = st.stream, ml = st.ml;
+  setHtml($('#sys'), `<div style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">Состояние системы</b>
+    <button class="x" data-close="sys" aria-label="Закрыть"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6E6E73" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="group" style="margin:6px 10px">
+      <div class="li"><span class="k">Поток NDTP</span><span class="v">${s.packets_per_s} пак/с · ${s.connections} соед.</span></div>
+      <div class="li"><span class="k">Ошибки CRC · опоздавшие точки</span><span class="v">${s.crc_errors} · ${s.late_points}</span></div>
+      <div class="li"><span class="k">Время потока</span><span class="v">${s.stream_time ? hhmm(s.stream_time) : '—'}</span></div></div>
+    <div class="group" style="margin:6px 10px">
+      <div class="li"><span class="k">ML-модуль</span><span class="v" style="color:${ml.status === 'ok' ? '#248A3D' : '#D70015'}">${ml.status === 'ok' ? 'работает' : 'деградация'}</span></div>
+      <div class="li"><span class="k">Задержка ML p50 / p95</span><span class="v">${ml.latency_ms_p50 ?? '—'} / ${ml.latency_ms_p95 ?? '—'} мс</span></div>
+      <div class="li"><span class="k">Пересчёт всех ТС за такт</span><span class="v">${s.infer_ms_per_T} мс</span></div>
+      <div class="li"><span class="k">Прогнозов выдано</span><span class="v">${s.predictions_total}</span></div>
+      <div class="li"><span class="k">Онлайн-точность</span><span class="v">${st.kpi.online_mae_s == null ? '—' : '±' + Math.round(st.kpi.online_mae_s) + ' с (' + st.kpi.n_evaluated + ')'}</span></div></div>
+    <div style="padding:8px 16px 14px"><a class="link" style="text-decoration:none" href="/docs" target="_blank" rel="noopener">API · Swagger ↗</a></div>`);
+}
+$('#sys').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) $('#sys').style.display = 'none'; });
+$('#status').onclick = () => { const el = $('#sys'); el.style.display = el.style.display === 'block' ? 'none' : 'block'; if (el.style.display === 'block') { $('#sys')._h = null; renderSys(); } };
+
+// ---------- аналитика (BI): понятные вопросы диспетчера ----------
+const charts = {};
+Chart.defaults.font.family = getComputedStyle(document.body).fontFamily; Chart.defaults.font.size = 12; Chart.defaults.color = '#6E6E73';
+const gridC = 'rgba(60,60,67,.08)';
+const CAUSE_LABEL = {accumulated:'Накопленное отставание', trend:'Отставание растёт', standstill:'Долгий простой', slow_segment:'Низкая скорость на участке',
+  history:'Проблемный участок (по прошлым кругам)', layover:'Начало рейса / разворот', place:'Особенность маршрута', telemetry:'Нет свежих данных', fallback:'Без ML (деградация)'};
+S.biHours = 3;
+function biSkeleton() {
+  $('#bi').innerHTML = `<button class="x" id="biClose" aria-label="Закрыть аналитику (Esc)" title="Вернуться к карте"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6E6E73" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  <div class="bi-head"><div><h2>Аналитика</h2><span class="sub" id="biSub">&nbsp;</span></div>
+    <div class="segctl" id="biPeriod" role="group" aria-label="Период" style="width:320px;margin-right:44px">
+      <button data-h="1">Последний час</button><button data-h="3" class="on">3 часа</button><button data-h="0">Весь день</button></div></div>
+  <div class="tile rep"><div><h3>Отчёт о работе диспетчеров</h3><span class="sub">Сколько сигналов было, сколько взято в работу, время реакции, отметки «прогноз неверен» и журнал действий — за выбранный период.</span></div>
+    <div class="rep-b"><a class="btn2" id="repCsv" href="#" download>Скачать CSV (Excel)</a><a class="btn2 sec" id="repPdf" href="#" target="_blank" rel="noopener">Открыть для печати / PDF</a></div></div>
+  <div class="bi-grid">
+    <div class="tile kpi s3"><span class="kl">Под риском сейчас</span><b id="kNow">—</b><span id="kNowS" class="kh">&nbsp;</span></div>
+    <div class="tile kpi s3"><span class="kl">Предупреждений за период</span><b id="kA">—</b><span id="kAS" class="kh">&nbsp;</span></div>
+    <div class="tile kpi s3"><span class="kl">Точность прогноза</span><b id="kAcc">—</b><span id="kAccS" class="kh">&nbsp;</span></div>
+    <div class="tile kpi s3"><span class="kl">Заблаговременность</span><b id="kL">—</b><span class="kh">до события приходит предупреждение</span></div>
+
+    <div class="tile s8"><h3>Когда были риски</h3><p class="hint2">Сколько машин получили предупреждение в каждые 15 минут. Наведите на столбик — увидите номера ТС.</p>
+      <div class="chart"><canvas id="chAlerts"></canvas></div><div class="nodata" id="ndAlerts">Предупреждений за период не было</div></div>
+    <div class="tile s4"><h3>Почему возникают опоздания</h3><p class="hint2">Главная причина в каждом предупреждении (по модели).</p>
+      <div class="chart"><canvas id="chCauses"></canvas></div><div class="nodata" id="ndCauses">Пока нет данных</div></div>
+
+    <div class="tile s6"><h3>Какие машины проблемные</h3><p class="hint2">Больше всего предупреждений за период. Нажмите на ТС — откроется на карте.</p>
+      <div class="chart"><canvas id="chTop"></canvas></div><div class="nodata" id="ndTop">Проблемных машин нет</div></div>
+    <div class="tile s6"><h3>Какие опоздания ожидались</h3><p class="hint2">Все прогнозы за период по величине отклонения от графика.</p>
+      <div class="chart"><canvas id="chDist"></canvas></div><div class="nodata" id="ndDist">Прогнозов ещё нет</div></div>
+
+    <div class="tile"><h3>Насколько точен прогноз</h3><p class="hint2">Через 12 минут после события система сама сверяет прогноз с фактическим проездом остановки по GPS. Чем ниже линия — тем точнее.</p>
+      <div class="chart" style="height:180px"><canvas id="chMae"></canvas></div><div class="nodata" id="ndMae">Проверки появятся через ~15 минут работы потока</div></div>
+
+    <div class="tile"><h3>Машины</h3><table><thead><tr><th>ТС</th><th>Сейчас</th><th class="num">Предупреждений</th><th class="num">из них высокий риск</th><th class="num">Типичный прогноз</th><th class="num">Худший прогноз</th><th class="num">Ошибка прогноза</th></tr></thead><tbody id="biT"></tbody></table></div>
+
+    <details class="tile tech"><summary><h3 style="display:inline">Техническое состояние системы</h3> <span class="sub">поток NDTP и скорость ML-модуля</span></summary>
+      <div class="chart" style="margin-top:12px"><canvas id="chPerf"></canvas></div></details>
+  </div>`;
+  const base = {responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}}};
+  charts.alerts = new Chart($('#chAlerts'), {type:'bar', data:{labels:[], datasets:[
+    {label:'Высокий риск', data:[], backgroundColor:'#FF3B30', borderRadius:4, stack:'a'},
+    {label:'Может опоздать', data:[], backgroundColor:'#FFCC00', borderRadius:4, stack:'a'}]},
+    options:{...base, plugins:{legend:{display:true, position:'top', align:'end', labels:{boxWidth:8, boxHeight:8, usePointStyle:true}},
+      tooltip:{callbacks:{title:(it) => `${it[0].label}–${S.biBins?.[it[0].dataIndex]?.end ?? ''}`,
+        footer:(it) => { const t = S.biBins?.[it[0].dataIndex]?.trs || []; return t.length ? 'ТС: ' + t.join(', ') : ''; }}}},
+      scales:{x:{stacked:true, grid:{display:false}, ticks:{maxTicksLimit:12}}, y:{stacked:true, grid:{color:gridC}, beginAtZero:true, ticks:{precision:0}, title:{display:true, text:'предупреждений'}}}}});
+  charts.causes = new Chart($('#chCauses'), {type:'bar', data:{labels:[], datasets:[{data:[], backgroundColor:'#FF9F0A', borderRadius:4}]},
+    options:{...base, indexAxis:'y', scales:{x:{grid:{color:gridC}, beginAtZero:true, ticks:{precision:0}}, y:{grid:{display:false}, ticks:{autoSkip:false, callback(v) { const l = this.getLabelForValue(v), out = []; let cur = '';
+      for (const w of String(l).split(' ')) { if ((cur + ' ' + w).trim().length > 20 && cur) { out.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }
+      return cur ? [...out, cur] : out; }}}}, layout:{padding:{left:6}}}});
+  charts.top = new Chart($('#chTop'), {type:'bar', data:{labels:[], datasets:[
+    {label:'Высокий риск', data:[], backgroundColor:'#FF3B30', borderRadius:4, stack:'a'},
+    {label:'Может опоздать', data:[], backgroundColor:'#FFCC00', borderRadius:4, stack:'a'}]},
+    options:{...base, indexAxis:'y', onClick:(e, el) => { if (el.length) { setView('map'); select(+charts.top.data.labels[el[0].index].replace('ТС ', ''), true); } },
+      onHover:(e, el) => { e.native.target.style.cursor = el.length ? 'pointer' : 'default'; },
+      plugins:{legend:{display:true, position:'top', align:'end', labels:{boxWidth:8, boxHeight:8, usePointStyle:true}}},
+      scales:{x:{stacked:true, grid:{color:gridC}, beginAtZero:true, ticks:{precision:0}}, y:{stacked:true, grid:{display:false}}}}});
+  charts.dist = new Chart($('#chDist'), {type:'bar', data:{labels:[], datasets:[{data:[], borderRadius:5,
+    backgroundColor:['#0A84FF', '#34C759', '#FFCC00', '#FF9F0A', '#FF3B30']}]},
+    options:{...base, scales:{x:{grid:{display:false}}, y:{grid:{color:gridC}, beginAtZero:true, ticks:{precision:0}, title:{display:true, text:'прогнозов'}}}}});
+  charts.mae = new Chart($('#chMae'), {type:'line', data:{labels:[], datasets:[{data:[], borderColor:'#007AFF', backgroundColor:'rgba(0,122,255,.10)', fill:true, tension:.35, pointRadius:3, spanGaps:true}]},
+    options:{...base, plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c) => `ошибка в среднем ${c.parsed.y.toFixed(1).replace('.', ',')} мин`}}},
+      scales:{x:{grid:{display:false}, ticks:{maxTicksLimit:12}}, y:{grid:{color:gridC}, beginAtZero:true, title:{display:true, text:'мин'}}}}});
+  charts.perf = new Chart($('#chPerf'), {type:'line', data:{labels:[], datasets:[
+    {label:'Пакетов NDTP в секунду', data:[], borderColor:'#34C759', tension:.3, pointRadius:0, yAxisID:'y'},
+    {label:'Время ответа ML (p95), мс', data:[], borderColor:'#AF52DE', tension:.3, pointRadius:0, yAxisID:'y1'}]},
+    options:{...base, plugins:{legend:{display:true, position:'top', align:'end', labels:{boxWidth:8, boxHeight:8, usePointStyle:true}}},
+      scales:{x:{grid:{display:false}, ticks:{maxTicksLimit:8}}, y:{grid:{color:gridC}, beginAtZero:true}, y1:{position:'right', grid:{display:false}, beginAtZero:true}}}});
+  $('#biClose').onclick = () => setView('map');
+  $('#biPeriod').addEventListener('click', (e) => { const b = e.target.closest('[data-h]'); if (!b) return;
+    document.querySelectorAll('#biPeriod button').forEach(x => x.classList.toggle('on', x === b)); S.biHours = +b.dataset.h; loadBI(); });
+  $('#biT').addEventListener('click', (e) => { const tr = e.target.closest('tr')?.dataset.tr; if (tr) { setView('map'); select(+tr, true); } });
+}
+const noData = (id, empty) => { $('#' + id).style.display = empty ? 'flex' : 'none'; };
+async function loadBI() {
+  if (S.view !== 'bi') return;
+  try {
+    const q = S.biHours ? `?hours=${S.biHours}` : '';
+    $('#repCsv').href = '/api/report/dispatcher?fmt=csv' + (S.biHours ? '&hours=' + S.biHours : ''); $('#repPdf').href = '/api/report/dispatcher?fmt=html' + (S.biHours ? '&hours=' + S.biHours : '');
+    const r = await fetch('/api/analytics' + q); if (r.status === 401) { location.href = '/login'; return; }
+    const a = await r.json(), t = a.totals, w = a.window;
+    $('#biSub').textContent = w.from ? `${hhmm(w.from)}–${hhmm(w.to)} по времени потока${S.state?.stream.source === 'demo' ? (isSynth() ? ' (синтетика)' : ' (архив 06.01.2026)') : ''} · ${t.predictions} прогнозов` : 'Данные появятся, когда пойдут прогнозы';
+    $('#kNow').textContent = t.at_risk_now; $('#kNow').style.color = t.at_risk_now ? '#D70015' : '';
+    $('#kNowS').textContent = `из ${t.on_line} машин на связи`;
+    $('#kA').textContent = t.alerts; $('#kAS').textContent = t.alerts ? `${t.red} с высоким риском` : 'за выбранный период';
+    $('#kAcc').textContent = t.within_2min == null ? '—' : t.within_2min + '%';
+    $('#kAccS').textContent = t.within_2min == null ? 'проверим по факту проезда остановок' : `ошибка до 2 мин · в среднем ${(t.online_mae_s / 60).toFixed(1).replace('.', ',')} мин · ${t.evaluated} проверок`;
+    $('#kL').textContent = t.lead_min_min == null ? '—' : `${Math.round(t.lead_min_min)}–${Math.round(t.lead_min_max)} мин`;
+    const tl = a.timeline, lab = tl.map(x => hhmm(x.t));
+    S.biBins = tl.map(x => ({trs: x.trs, end: hhmm(x.t + w.bin_min * 60)}));
+    charts.alerts.data.labels = lab; charts.alerts.data.datasets[0].data = tl.map(x => x.red); charts.alerts.data.datasets[1].data = tl.map(x => x.yellow); charts.alerts.update('none');
+    noData('ndAlerts', !tl.some(x => x.red + x.yellow));
+    charts.causes.data.labels = a.causes.map(c => CAUSE_LABEL[c.factor] || c.factor); charts.causes.data.datasets[0].data = a.causes.map(c => c.n); charts.causes.update('none');
+    noData('ndCauses', !a.causes.length);
+    const top = a.vehicles.filter(v => v.alerts).slice(0, 8);
+    charts.top.data.labels = top.map(v => 'ТС ' + v.tr_id); charts.top.data.datasets[0].data = top.map(v => v.red); charts.top.data.datasets[1].data = top.map(v => v.alerts - v.red); charts.top.update('none');
+    noData('ndTop', !top.length);
+    charts.dist.data.labels = a.dist.map(d => d.label); charts.dist.data.datasets[0].data = a.dist.map(d => d.n); charts.dist.update('none');
+    noData('ndDist', !a.dist.some(d => d.n));
+    charts.mae.data.labels = lab; charts.mae.data.datasets[0].data = tl.map(x => x.mae_s == null ? null : +(x.mae_s / 60).toFixed(2)); charts.mae.update('none');
+    noData('ndMae', !tl.some(x => x.mae_s != null));
+    charts.perf.data.labels = a.perf.map(x => x.stream_time ? hhmm(x.stream_time) : ''); charts.perf.data.datasets[0].data = a.perf.map(x => x.pps); charts.perf.data.datasets[1].data = a.perf.map(x => x.ml_p95); charts.perf.update('none');
+    setHtml($('#biT'), a.vehicles.map(v => `<tr data-tr="${v.tr_id}"><td><b>ТС ${v.tr_id}</b><div class="cap">борт ${v.unit_id ?? '—'}</div></td>
+      <td><span class="rd" style="background:${RISK[v.risk_now].fill}"></span>${RISK[v.risk_now].tag}</td>
+      <td class="num">${v.alerts || '—'}</td><td class="num">${v.red || '—'}</td><td class="num">${sgn(v.mean_pred_s)}</td><td class="num">${sgn(v.max_pred_s)}</td>
+      <td class="num">${v.mae_s == null ? '—' : 'в ср. ' + mins(v.mae_s)}</td></tr>`).join('') || '<tr><td colspan="7" class="sub">Данных пока нет — они появятся по мере работы потока</td></tr>');
+  } catch (e) {}
+}
+
+function setView(v) {
+  S.view = v;
+  document.querySelectorAll('[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  $('#bi').style.display = v === 'bi' ? 'block' : 'none';
+  $('#lines').style.display = v === 'lines' ? 'grid' : 'none';
+  document.body.classList.toggle('view-lines', v === 'lines');
+  document.body.classList.toggle('view-bi', v === 'bi');
+  $('#flt').style.display = v === 'lines' ? 'none' : '';
+  ['#ctl', '#legend'].forEach(s => $(s).style.display = v === 'map' ? '' : 'none');
+  S.listHtml = ''; S.lnKey = null;
+  if (v === 'map') setTimeout(() => map.invalidateSize(), 0);
+  if (v === 'lines') { if (!S.sel) { const f = inboxItems().fresh[0]; if (f) S.sel = f.tr_id; } if (S.sel) { loadThread(S.sel); loadWhatIf(S.state?.vehicles.find(x => x.tr_id === S.sel)); } loadRibbons(); }
+  if (v === 'bi') { if (!charts.alerts) biSkeleton(); $('#card').style.display = 'none'; loadBI(); } else { S.cardKey = null; if (S.state) render(); }
+}
+document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => setView(b.dataset.v));
+setInterval(loadBI, 4000);
+
+// ---------- обучение: пошаговый тур с подсветкой ----------
+// каждое предложение обучения — с новой строки
+const tourLines = (...xs) => xs.map(x => `<span class="ln1">${x}</span>`).join('');
+const TOUR = [
+  {sel:'#hero', t:'Статус и главное число', before: () => setView('map'), p: () => tourLines(
+     'Число — сколько событий ожидается в ближайшие 10–15 минут: опоздания и прибытия раньше плана.',
+     'Значок слева показывает общий статус.',
+     `<span class="tl">${statusIcon('calm', 26)}<span><b>Зелёный</b> — спокойно, непринятых событий нет.</span></span>`,
+     `<span class="tl">${statusIcon('mid', 26)}<span><b>Жёлтый</b> — повышенный риск: есть непринятые события.</span></span>`,
+     `<span class="tl">${statusIcon('high', 26)}<span><b>Красный</b> — высокий риск или нет связи с потоком.</span></span>`)},
+  {sel:'.stats', t:'Три счётчика', p: tourLines(
+     '<b>Новые</b> — события, которые ещё никто не взял.',
+     '<b>В работе</b> — принятые диспетчером.',
+     'Срочность остаётся до проезда остановки.',
+     '<b>Нет данных</b> — машины, от которых давно нет GPS.',
+     'Это не «всё в порядке», а отсутствие данных.')},
+  {sel:'.legend', t:'Карта', before: () => setView('map'), p: () => tourLines(
+     `<span class="tl">${sampleVeh('green')}<span><b>Зелёная</b> — идёт по графику.</span></span>`,
+     `<span class="tl">${sampleVeh('yellow')}<span><b>Жёлтая</b> — может опоздать.</span></span>`,
+     `<span class="tl">${sampleVeh('red')}<span><b>Красная</b> — скорее всего опоздает.</span></span>`,
+     `<span class="tl">${sampleVeh('early')}<span><b>Фиолетовая</b> — приедет раньше плана.<br>В подписи слово «раньше» и значок ⇇.</span></span>`,
+     `<span class="tl">${sampleVeh('none')}<span><b>Серая</b> — нет данных, а не норма.</span></span>`,
+     '<span class="cap">Треугольник у метки — направление движения.</span>',
+     '<span class="cap">Синяя линия — маршрут выбранной машины.</span>')},
+  {sel:'#card', t:'Карточка на карте', p: tourLines(
+     'Нажмите на машину на карте или в списке слева — откроется карточка, а карта покажет машину и её целевую остановку.',
+     'В карточке: остановка, время «план → прогноз», вероятность, свежесть данных и рекомендации, что делать.',
+     'Ниже — вероятная причина и журнал; кнопка «Принять» отмечает, что сигнал взят в работу.',
+     '«Не так» — отметить неверный прогноз для дообучения.'), before: () => { setView('map'); const v = S.state?.vehicles.find(isRisk) || S.state?.vehicles.find(x => x.lat != null); if (v && !S.sel) select(v.tr_id, true); }},
+  {sel:'#lines .ln-main', t:'Ленты маршрутов', before: () => setView('lines'), p: tourLines(
+     'Каждая лента — текущий рейс машины от начала до конца.',
+     `<span class="tl"><i class="tk0"></i><span><b>Засечки</b> — остановки.<br>Расстояния между ними пропорциональны пути по дорогам.</span></span>`,
+     `<span class="tl"><i class="vd0"></i><span><b>Цветной кружок</b> — где машина сейчас.<br><b>Пунктирный</b> — где она должна быть по графику.<br>Полоса между ними — отставание.</span></span>`,
+     `<span class="tl"><i class="ng0">?</i><span><b>«нет GPS»</b> — данных нет, показано только плановое положение.</span></span>`,
+     '<span class="cap">Жёлтая подсветка — машины сбились в пару.</span>',
+     '<span class="cap">Нажмите ленту или кружок, чтобы открыть событие.</span>')},
+  {sel:'#list', t:'Очередь событий (вкладка «Ленты»)', before: () => setView('lines'), p: tourLines(
+     '<b>Новые</b> — сигналы, которые ещё никто не взял.',
+     '<b>В работе</b> — сигналы, принятые диспетчером.',
+     '<b>Завершено</b> — остановка пройдена или риск ушёл.',
+     'В «Завершено» есть фильтр: все, принятые, без решения.',
+     'В строке — машина, тип события, остановка и время «план → прогноз».',
+     '«Принять в работу» не снимает срочность: событие остаётся до проезда остановки.',
+     'Клавиши: ↑↓ — выбрать, Enter — принять, S — отложить на минуту.')},
+  {sel:'#lnInc', t:'Выбранное событие', before: () => { setView('lines'); const f = inboxItems().fresh[0] || inboxItems().work[0]; if (f && !S.sel) lnSelect(f.tr_id); }, p: tourLines(
+     'Вверху — машина, событие и целевая остановка.',
+     '<b>Нитка графика</b> сравнивает план, фактические проезды и прогноз.',
+     '<b>Где сейчас</b> — мини-карта с машиной и целевой остановкой.',
+     'Нажмите на мини-карту, чтобы открыть большую.',
+     'Ниже — время «план → прогноз», вероятность, свежесть GPS и прогноза.',
+     'Затем вероятная причина (гипотеза по признакам) и журнал.',
+     'Внизу — кнопка «Принять в работу».')},
+  {sel:'[data-v=bi]', t:'Аналитика', p: tourLines(
+     'Качество прогноза по фактам, распределение событий и производительность системы.',
+     'Здесь же — отчёт о работе диспетчеров: CSV для Excel или страница для печати в PDF.')},
+  {sel:'#status', t:'Состояние системы', p: tourLines(
+     'Поток NDTP, ML-модуль, задержки.',
+     'Фиолетовая пометка «Архив» означает, что данные — архив телеметрии 06.01.2026.',
+     'Это не текущая обстановка в городе.')},
+  {sel:'#acct', t:'Настройки', before: () => setView('map'), p: tourLines(
+     'Карта: OpenStreetMap или Яндекс.',
+     'Скорость воспроизведения архива и звук оповещений.',
+     'Здесь же — это обучение и выход из аккаунта.')},
+];
+let tourI = 0;
+// образец метки для обучения — та же вёрстка, что на карте
+const sampleVeh = (risk) => `<span class="tv"><span class="vm" style="--c:${RISK[risk].fill};--t:${RISK[risk].text}"><span class="rot" style="transform:rotate(45deg)"></span><span class="disc">${busIcon(RISK[risk].fg, 13)}</span></span></span>`;
+function startTour() { tourI = 0; $('#tour').style.display = 'block'; showStep(); }
+function endTour() { $('#tour').style.display = 'none'; try { localStorage.setItem('pulseTourSeen', '1'); } catch (e) {} }
+function showStep() {
+  const st = TOUR[tourI]; if (st.before) st.before();
+  setTimeout(() => {
+    const el = document.querySelector(st.sel);
+    const r = el && el.getClientRects().length ? el.getBoundingClientRect() : {left: innerWidth / 2 - 100, top: innerHeight / 2 - 40, width: 200, height: 80};
+    const pad = 8, spot = $('#tSpot');
+    Object.assign(spot.style, {left: r.left - pad + 'px', top: r.top - pad + 'px', width: r.width + pad * 2 + 'px', height: Math.min(r.height, innerHeight - 40) + pad * 2 + 'px'});
+    const tip = $('#tTip');
+    tip.innerHTML = `<span class="tt">${st.t}</span><p>${typeof st.p === 'function' ? st.p() : st.p}</p><div class="tnav"><div class="dots">${TOUR.map((_, j) => `<i class="${j === tourI ? 'on' : ''}"></i>`).join('')}</div>
+      <div style="display:flex;gap:6px">${tourI ? '<button class="back">Назад</button>' : '<button class="skip">Пропустить</button>'}<button class="next">${tourI === TOUR.length - 1 ? 'Готово' : 'Далее'}</button></div></div>`;
+    tip.style.animation = 'none'; void tip.offsetWidth; tip.style.animation = '';
+    Object.assign(tip.style, {top: 'auto', bottom: '72px'});  // всегда в одном месте — внизу по центру, над легендой
+  }, st.before ? 450 : 0);
+}
+$('#tour').addEventListener('click', (e) => {
+  if (e.target.closest('.next')) { if (tourI < TOUR.length - 1) { tourI++; showStep(); } else endTour(); }
+  else if (e.target.closest('.back')) { tourI = Math.max(0, tourI - 1); showStep(); }
+  else if (e.target.closest('.skip')) endTour();
+});
+
+// ---------- управление ----------
+function closeCard() { S.sel = null; S.follow = null; S.cardKey = null; S.selKey = null; S.sliceKey = null; V.clear('sel'); V.clear('slice'); S.listHtml = ''; render(); }
+// ТС и его цель — в свободной части карты (правее панели и карточки)
+function focusVehicle(v) {
+  if (!v || v.lat == null || S.view !== 'map') return;
+  const a = [v.lat, v.lon], i = v.incident, t = i && isRisk(v) ? [i.target_lat, i.target_lon] : a;
+  const s0 = [Math.min(a[0], t[0]), Math.min(a[1], t[1])], n0 = [Math.max(a[0], t[0]), Math.max(a[1], t[1])];
+  const dy = Math.max(.004, (n0[0] - s0[0]) * .6), dx = Math.max(.006, (n0[1] - s0[1]) * .6);
+  V.fit([[s0[0] - dy, s0[1] - dx], [n0[0] + dy, n0[1] + dx]], padL(), padR(), 16);
+  S.focusAt = Date.now();
+}
+// пока карточка открыта, машина не уходит из кадра: если уехала за край или под карточку — вернуть
+function keepInView(v) {
+  if (!v || v.lat == null || S.view !== 'map' || S.follow || Date.now() - (S.focusAt || 0) < 4000) return;
+  const p = V.px([v.lat, v.lon]); if (!p) return;
+  const off = V === LView ? 0 : 372, left = padL()[0] - off + 20;
+  const w = innerWidth - off, h = innerHeight;
+  if (p.x < left || p.x > w - 90 || p.y < 40 || p.y > h - 60) focusVehicle(v);
+}
+function select(tr, pan) {
+  $('#sys').style.display = 'none';  // выбор ТС закрывает «Состояние системы»
+  S.sel = tr; S.opt = 0; S.cardKey = null; S.listHtml = '';
+  const v = S.state?.vehicles.find(x => x.tr_id === tr);
+  S.focusAt = 0;
+  render(); if (pan && v) focusVehicle(v); loadWhatIf(v);
+}
+async function loadWhatIf(v) {
+  const i = v?.incident; if (!i || !isRisk(v) || i.sample_id in S.whatif || i.degraded || i.prediction_s < 0) return;
+  S.whatif[i.sample_id] = null;
+  try { const r = await post(`/api/vehicles/${v.tr_id}/whatif`, {scenarios:['none', 'signal_priority', 'short_dwell']}); if (Array.isArray(r)) { S.whatif[i.sample_id] = r; render(); } else delete S.whatif[i.sample_id]; }
+  catch (e) { delete S.whatif[i.sample_id]; }
+}
+async function post(url, body) {
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if (r.status === 401) { location.href = '/login'; return null; }
+  return r.json();
+}
+let tt; function toast(t, s) { $('#toastT').textContent = t; $('#toastS').textContent = s; $('#toast').style.display = 'flex'; clearTimeout(tt); tt = setTimeout(() => $('#toast').style.display = 'none', 3200); }
+document.querySelectorAll('#flt button').forEach(b => b.onclick = () => { document.querySelectorAll('#flt button').forEach(x => x.classList.toggle('on', x === b)); S.filter = b.dataset.f; S.routeStyleKey = {}; render(); });
+$('#q').oninput = (e) => { S.q = e.target.value.trim(); S.routeStyleKey = {}; render(); };
+// ---------- аккаунт и подложка карты ----------
+S.provider = 'osm'; S.muted = true; S.me = null; S.speed = 1; S.font = 'Tektur'; S.sound = true;
+// звук: короткий мягкий двойной сигнал (Web Audio, без файлов); браузер разрешает звук после первого клика
+let actx = null;
+document.addEventListener('pointerdown', () => { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {} }, {once:false});
+function chime() {
+  if (!actx) return;
+  const t0 = actx.currentTime;
+  [[880, 0], [1175, .16]].forEach(([f, dt]) => {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t0 + dt); g.gain.linearRampToValueAtTime(.18, t0 + dt + .02); g.gain.exponentialRampToValueAtTime(.001, t0 + dt + .35);
+    o.connect(g).connect(actx.destination); o.start(t0 + dt); o.stop(t0 + dt + .4);
+  });
+}
+const BRAND_FONTS = ['Tektur', 'Rubik Mono One', 'Poiret One', 'Days One', 'Handjet', 'Pixelify Sans'];
+function applyFont(f) { if (!BRAND_FONTS.includes(f)) f = 'Tektur'; S.font = f; document.documentElement.style.setProperty('--brand', `"${f}", var(--sf)`); }
+function applyMuted(on) { S.muted = on; $('#map').classList.toggle('muted', on); $('#ymap').classList.toggle('muted', on); }
+let ymapsLoading = null;
+function loadYmaps(key) {
+  if (window.ymaps) return new Promise(r => ymaps.ready(r));
+  if (ymapsLoading) return ymapsLoading;
+  ymapsLoading = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU' + (key ? '&apikey=' + encodeURIComponent(key) : '');
+    sc.onload = () => ymaps.ready(res); sc.onerror = () => { ymapsLoading = null; rej(new Error('ymaps')); };
+    document.head.appendChild(sc);
+  });
+  return ymapsLoading;
+}
+// Смена движка: Яндекс рисует всё своими объектами (слой Leaflet поверх карты Яндекса не допускается)
+function rebuildLayers() {
+  for (const k of Object.keys(markers)) delete markers[k];
+  ['stops', 'labels', 'sel', 'slice', 'veh'].forEach(l => V.clear(l));
+  S.selKey = null; S.sliceKey = null; S.cardKey = null;
+  buildRoutes(); drawStops(); render();
+}
+async function setProvider(p, silent) {
+  if (p === S.provider && (p === 'osm' || V.kind === 'yandex')) { if (!silent) saveSettings(); return; }
+  if (p === 'yandex') {
+    try { await loadYmaps(S.me?.yandex?.key); }
+    catch (e) { toast('Яндекс Карты недоступны', 'Остаёмся на OpenStreetMap'); return; }
+    const center = V.center(), zoom = V.zoom();
+    Object.values(LL).forEach(l => l.clearLayers());
+    $('#map').style.display = 'none'; $('#ymap').style.display = 'block'; document.body.classList.add('ya');
+    V = makeYView(center, zoom);
+    let t; V.ym.events.add('boundschange', () => { clearTimeout(t); t = setTimeout(drawStops, 150); });
+    S.provider = 'yandex';
+  } else {
+    const center = V.center(), zoom = V.zoom();
+    if (V.destroy) V.destroy();
+    $('#ymap').style.display = 'none'; $('#map').style.display = ''; document.body.classList.remove('ya');
+    V = LView; map.invalidateSize(); map.setView(center, zoom, {animate:false});
+    S.provider = 'osm';
+  }
+  rebuildLayers();
+  if (!silent) saveSettings();
+  if ($('#settings').style.display === 'flex') renderSettings();
+}
+async function saveSettings() {
+  await fetch('/api/me/settings', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({map_provider: S.provider, muted: S.muted, demo_speed: S.speed, brand_font: S.font, sound: S.sound})});
+}
+const MAP_PREVIEW = {
+  osm: `<svg class="pv" viewBox="0 0 250 92" preserveAspectRatio="xMinYMid slice"><rect width="250" height="92" fill="#F2EFE9"/>
+    <path d="M0 62 C50 50 90 78 140 62 S210 40 250 50" stroke="#AAD3DF" stroke-width="10" fill="none"/>
+    <path d="M40 0 L80 92 M0 32 H250 M170 0 L140 92" stroke="#fff" stroke-width="7"/><path d="M40 0 L80 92 M0 32 H250 M170 0 L140 92" stroke="#F7FABF" stroke-width="3"/>
+    <rect x="186" y="44" width="40" height="22" rx="2" fill="#CDEBB0"/>
+    <g transform="translate(14 12)"><rect width="28" height="28" rx="7" fill="#7EBC6F"/><circle cx="14" cy="14" r="7" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="14" cy="14" r="2.4" fill="#fff"/></g></svg>`,
+  yandex: `<svg class="pv" viewBox="0 0 250 92" preserveAspectRatio="xMinYMid slice"><rect width="250" height="92" fill="#F5F4F0"/>
+    <path d="M0 60 C50 48 90 76 140 60 S210 40 250 48" stroke="#B5D0F5" stroke-width="10" fill="none"/>
+    <path d="M40 0 L80 92 M0 32 H250 M170 0 L140 92" stroke="#fff" stroke-width="8"/><path d="M40 0 L80 92 M170 0 L140 92" stroke="#FFD166" stroke-width="3"/>
+    <g transform="translate(14 12)"><rect width="28" height="28" rx="7" fill="#FC3F1D"/><text x="14" y="20" font-size="17" font-weight="700" fill="#fff" text-anchor="middle" font-family="Arial,sans-serif">Я</text></g></svg>`,
+};
+function renderSettings() {
+  const u = S.me?.user || '—', hasKey = S.me?.yandex?.has_key;
+  const card = (p, title, sub) => `<button class="mapc ${S.provider === p ? 'on' : ''}" data-p="${p}" aria-pressed="${S.provider === p}">${MAP_PREVIEW[p]}
+      <span class="ck"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><b>${title}</b><span>${sub}</span></button>`;
+  $('#sheet').innerHTML = `
+    <div class="sh-head"><span style="width:60px"></span><b>Настройки</b><button class="done" data-close="1">Готово</button></div>
+    <div class="sh-body">
+      <div class="gh">Профиль</div>
+      <div class="group"><div class="prof"><span class="ava">${esc(u[0] || '?')}</span><div style="display:flex;flex-direction:column;gap:2px"><b style="font-size:17px">${esc(u)}</b><span class="sub">Оператор диспетчерской · сессия 12 часов</span></div></div></div>
+      <div class="gh">Карта</div>
+      <div class="maps">${card('osm', 'OpenStreetMap', 'Открытая карта')}${card('yandex', 'Яндекс Карты · бета', hasKey ? 'Подробная карта Москвы' : 'Нужен API-ключ')}</div>
+      <div class="group" style="margin-top:12px"><div class="li" style="align-items:center"><span>Приглушённые цвета карты</span><button class="sw ${S.muted ? 'on' : ''}" id="swMuted" role="switch" aria-checked="${S.muted}" aria-label="Приглушённые цвета карты"></button></div></div>
+      <div class="hint">Карта светлее — цветные метки транспорта заметнее.</div>
+      <div class="gh">Данные</div>
+      <div class="group">${(S.datasets || []).map(d => `<button class="dsrow ${d.current ? 'on' : ''}" data-ds="${d.id}"><span><b>${esc(d.title)}</b><span class="cap">${esc(d.description)}${d.vehicles ? ` · ${d.vehicles} ТС` : ''}</span></span>${d.current ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>' : ''}</button>`).join('') || '<div class="li cap">Загрузка…</div>'}</div>
+      <div class="hint">Смена данных перезапускает поток с 06:00 для всех операторов.</div>
+      <div class="gh">Скорость воспроизведения</div>
+      <div class="group"><div class="speeds"><div class="segctl" style="flex:1">${[1, 5, 10, 30].map(x => `<button data-speed="${x}" class="${S.speed === x ? 'on' : ''}">×${x}</button>`).join('')}</div></div></div>
+      <div class="hint">×1 — реальное время, ускорение — для показа. Действует для всех операторов.</div>
+      <div class="gh">Экран и оповещения</div>
+      <div class="group">
+        <div class="li sl"><span>Во весь экран<span class="cap">Esc — выйти</span></span><button class="sw ${document.fullscreenElement ? 'on' : ''}" id="swFull" role="switch" aria-checked="${!!document.fullscreenElement}" aria-label="Во весь экран"></button></div>
+        <div class="li sl"><span>Звук при высоком риске<span class="cap">Сигнал при новой машине с высоким риском</span></span><button class="sw ${S.sound ? 'on' : ''}" id="swSound" role="switch" aria-checked="${S.sound}" aria-label="Звук при высоком риске"></button></div>
+      </div>
+      <div class="gh">Помощь</div>
+      <div class="group"><button class="fontrow" id="tourBtn" style="font-size:15px;color:var(--blue2)">Как пользоваться — обучение за минуту</button></div>
+      <div class="gh">Аккаунт</div>
+      <div class="group"><button class="danger" id="logout">Выйти из аккаунта</button></div>
+    </div>`;
+}
+function openSettings(on) { $('#settings').style.display = on ? 'flex' : 'none'; if (on) { renderSettings(); loadDatasets().then(() => $('#settings').style.display === 'flex' && renderSettings()); } }
+$('#acct').onclick = () => openSettings(true);
+$('#settings').addEventListener('click', async (e) => {
+  if (e.target === $('#settings') || e.target.closest('[data-close]')) { openSettings(false); return; }
+  const pb = e.target.closest('[data-p]'); if (pb) { await setProvider(pb.dataset.p); renderSettings(); return; }
+  const ds = e.target.closest('[data-ds]');
+  if (ds && !ds.classList.contains('on')) {
+    toast('Переключаем данные…', ds.dataset.ds === 'synthetic' ? 'Синтетика: первый раз генерация займёт около минуты' : 'Архив 06.01.2026');
+    const r = await post('/api/dataset', {dataset: ds.dataset.ds});
+    if (r?.status === 'ok') { toast('Данные переключены', `${r.vehicles} ТС · поток с 06:00`); S.routesVersion = null; S.rib = null; S.thread = {}; S.active = {}; S.done = []; S.ack = {}; S.sel = null; loadRoutesRetry(); }
+    await loadDatasets(); renderSettings(); return;
+  }
+  const sp = e.target.closest('[data-speed]'); if (sp) { S.speed = +sp.dataset.speed; await post('/api/replay/speed', {speed: S.speed}); toast('Скорость воспроизведения', S.speed === 1 ? 'Реальное время' : `Ускорено ×${S.speed}`); renderSettings(); return; }
+  if (e.target.closest('#swSound')) { S.sound = !S.sound; saveSettings(); renderSettings(); if (S.sound) chime(); return; }
+  if (e.target.closest('#swMuted')) { applyMuted(!S.muted); saveSettings(); renderSettings(); return; }
+  if (e.target.closest('#tourBtn')) { openSettings(false); startTour(); return; }
+  if (e.target.closest('#swFull')) {
+    try { document.fullscreenElement ? await document.exitFullscreen() : await document.documentElement.requestFullscreen(); }
+    catch (err) { toast('Полноэкранный режим недоступен', 'Браузер не разрешил — попробуйте F11'); }
+    renderSettings(); return;
+  }
+  if (e.target.closest('#logout')) { await fetch('/api/logout', {method:'POST'}); location.href = '/login'; }
+});
+(async () => {
+  try {
+    const r = await fetch('/api/me'); if (r.status === 401) { location.href = '/login'; return; }
+    S.me = await r.json(); $('#avaS').textContent = (S.me.user[0] || '?'); $('#userS').textContent = S.me.user;
+    applyMuted(S.me.settings.muted); S.sound = S.me.settings.sound !== false;
+    const forced = new URLSearchParams(location.search).get('map');  // ?map=osm — аварийный возврат на OSM
+    if (forced === 'osm') { S.provider = 'osm'; saveSettings(); }
+    else if (S.me.settings.map_provider === 'yandex') setProvider('yandex', true);
+    try { if (!localStorage.getItem('pulseTourSeen')) setTimeout(() => startTour(), 2500); } catch (e) {}
+  } catch (e) {}
+})();
+$('#srcBtn').onclick = () => openSettings(true);
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setView('map'); $('#q').focus(); $('#q').select(); return; }
+  if (e.key === 'Escape' && $('#tour').style.display === 'block') { endTour(); return; }
+  if (e.key === 'Escape') {
+    if (document.activeElement === $('#q')) { $('#q').blur(); return; }
+    if ($('#sys').style.display === 'block') { $('#sys').style.display = 'none'; return; }
+    if ($('#settings').style.display === 'flex') { openSettings(false); return; }
+    if (S.view !== 'map') { setView('map'); return; }
+    if (S.sel) closeCard(); return;
+  }
+  if (S.view === 'lines' && S.state && document.activeElement?.tagName !== 'INPUT' && !e.metaKey && !e.ctrlKey) {
+    const rows = S.inboxTab === 'new' ? inboxItems().fresh : inboxItems().work;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!rows.length) return; e.preventDefault();
+      let j = rows.findIndex(v => v.tr_id === S.sel); j = e.key === 'ArrowDown' ? Math.min(rows.length - 1, j + 1) : Math.max(0, j - 1);
+      lnSelect(rows[j].tr_id); return;
+    }
+    if (e.key === 'Enter' && S.sel && e.target.tagName !== 'BUTTON') { e.preventDefault(); acceptAlert(S.sel); return; }
+    if (['s', 'S', 'ы', 'Ы'].includes(e.key) && S.sel) { snoozeAlert(S.sel); return; }
+  }
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && S.state && S.view === 'map' && document.activeElement?.tagName !== 'INPUT') {
+    const rows = listed(); if (!rows.length) return; e.preventDefault();
+    let j = rows.findIndex(v => v.tr_id === S.sel); j = e.key === 'ArrowDown' ? Math.min(rows.length - 1, j + 1) : Math.max(0, j - 1);
+    select(rows[j].tr_id, true); document.querySelector(`.row[data-tr="${rows[j].tr_id}"]`)?.scrollIntoView({block:'nearest'});
+  }
+});
+async function poll() {
+  try {
+    const r = await fetch('/api/state'); if (r.status === 401) { location.href = '/login'; return; }
+    S.state = await r.json();
+    if (S.routesVersion && S.state.routes_version !== S.routesVersion) { S.routesVersion = S.state.routes_version; loadRoutesRetry(); }  // маршруты обновились на сервере
+    S.routesVersion = S.routesVersion || S.state.routes_version;
+    render();
+    const v = S.state.vehicles.find(x => x.tr_id === S.sel); if (v) loadWhatIf(v);
+    if (S.view === 'lines') { inboxItems().fresh.slice(0, 8).forEach(loadWhatIf); loadRibbons(); }
+  } catch (e) { $('#banner').style.display = 'flex'; $('#bannerText').textContent = 'Нет связи с сервером · переподключение…'; }
+  setTimeout(poll, 1500);
+}
+async function loadRoutesRetry(n = 0) { try { await loadRoutes(); render(); } catch (e) { if (n < 10) setTimeout(() => loadRoutesRetry(n + 1), 2000 * (n + 1)); } }
+loadRoutesRetry(); poll();
+
+// ---------- статус сети: зелёный — спокойно, жёлтый — повышенный риск, красный — сильный ----------
+function netLevel() {
+  const st = S.state; if (!st) return 'calm';
+  const open = st.vehicles.filter(v => isRisk(v) && !S.ack[v.tr_id]);
+  if (st.stream.status === 'offline' || open.some(v => v.risk === 'red')) return 'high';
+  return open.length ? 'mid' : 'calm';
+}
+const LEVEL = {calm:{c:'#34C759', t:'Спокойно'}, mid:{c:'#FFCC00', t:'Повышенный риск'}, high:{c:'#FF3B30', t:'Высокий риск'}};
+function statusIcon(level = 'calm', size = 44) {
+  const L = LEVEL[level], g = level === 'calm'
+    ? '<path d="m8 12.5 2.8 2.8L16.5 9.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'
+    : level === 'mid' ? '<path d="M12 7v6" stroke="#1D1D1F" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.5" fill="#1D1D1F"/>'
+    : '<path d="M9.3 7v6M14.7 7v6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="9.3" cy="16.6" r="1.5" fill="#fff"/><circle cx="14.7" cy="16.6" r="1.5" fill="#fff"/>';
+  return `<span class="sticon ${level}" title="${L.t}" aria-label="${L.t}"><svg width="${size}" height="${size}" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="${L.c}"/>${g}</svg></span>`;
+}
+
+// ---------- события: новое → в работе → завершено ----------
+// Событие — машина под риском (опоздание или раньше плана). Новый прогноз по той же машине обновляет событие,
+// а не создаёт новую карточку. Принятие в работу не снимает срочность; событие закрывается, когда риск ушёл
+// (остановка пройдена или прогноз вернулся в норму).
+S.inboxTab = 'new'; S.snoozed = {}; S.rib = null; S.thread = {}; S.ack = {}; S.active = {}; S.done = [];
+const SNOOZE_MS = 60000;
+const isSnoozed = (v) => S.snoozed[v.tr_id] && Date.now() - S.snoozed[v.tr_id] < SNOOZE_MS;
+function trackEvents() {
+  const st = S.state, now = st.stream.stream_time; if (!now) return;
+  for (const v of st.vehicles) {
+    if (v.ack && !S.ack[v.tr_id]) S.ack[v.tr_id] = {at: hhmm(v.ack.at), user: v.ack.user, sample_id: v.incident?.sample_id};
+    else if (!v.ack && isRisk(v) && S.ack[v.tr_id]?.server) delete S.ack[v.tr_id];  // снял другой диспетчер
+    if (v.ack && S.ack[v.tr_id]) { S.ack[v.tr_id].server = true; S.ack[v.tr_id].user = v.ack.user; }
+  }
+  const cur = new Set();
+  for (const v of st.vehicles) {
+    if (!isRisk(v)) continue;
+    cur.add(v.tr_id);
+    const a = S.active[v.tr_id] || (S.active[v.tr_id] = {since: now, seen: Date.now()});
+    Object.assign(a, {kind: v.risk, stop: v.incident.target_name, amount: v.incident.prediction_s});
+  }
+  for (const tr of Object.keys(S.active)) if (!cur.has(+tr)) {
+    const a = S.active[tr];
+    S.done.unshift({tr: +tr, since: a.since, closed: now, kind: a.kind, stop: a.stop, amount: a.amount, ack: S.ack[tr]?.at});
+    delete S.active[tr]; delete S.ack[tr]; delete S.snoozed[tr];
+  }
+  S.done.length = Math.min(S.done.length, 30);
+}
+// порядок: группа (высокий риск → может опоздать → раньше плана), внутри — по времени появления: строки не прыгают
+const PRI = {red:0, yellow:1, early:2};
+function inboxItems() {
+  const st = S.state; if (!st) return {fresh:[], work:[], snoozed:0};
+  const since = (v) => S.active[v.tr_id]?.since ?? 0;
+  const risky = st.vehicles.filter(isRisk).sort((a, b) => PRI[a.risk] - PRI[b.risk] || since(a) - since(b) || a.tr_id - b.tr_id);
+  return {fresh: risky.filter(v => !S.ack[v.tr_id] && !isSnoozed(v)), work: risky.filter(v => S.ack[v.tr_id]),
+          snoozed: risky.filter(v => !S.ack[v.tr_id] && isSnoozed(v)).length};
+}
+const isFresh = (v) => Date.now() - (S.active[v.tr_id]?.seen ?? 0) < 30000;
+function evCard(v) {
+  const i = v.incident, c = RISK[v.risk], sel = v.tr_id === S.sel, ak = S.ack[v.tr_id];
+  const dash = Math.round(Math.max(0.05, 1 - i.eta_min / 20) * 119);
+  return `<div class="ibx ${sel ? 'sel' : ''}" data-tr="${v.tr_id}">
+    <button class="ibx-main" data-tr="${v.tr_id}"><span class="ring" title="Через ${i.eta_min} мин машина будет на целевой остановке — там ожидается ${isEarly(v) ? 'раннее прибытие' : 'опоздание'}. Чем полнее круг, тем ближе событие."><svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="none" stroke="#E8E8ED" stroke-width="4"/><circle cx="22" cy="22" r="19" fill="none" stroke="${c.fill}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${dash} 119" transform="rotate(-90 22 22)"/></svg><span><i>через</i><b>${i.eta_min}</b><i>мин</i></span></span>
+    <span class="ibx-t"><span class="ibx-h"><b>ТС ${v.tr_id}</b>${isFresh(v) && !ak ? '<span class="nw">новое</span>' : ''}</span>
+      <span class="kind" style="background:${c.bg};color:${c.text}">${evIcon(v)}${evKind(v)} ${mins(i.prediction_s)}</span>
+      <span class="ibx-c">${esc(sn(i.target_name))}</span>
+      <span class="cap">план ${hhmm(i.target_time_begin)} → прогноз ${hhmm(i.forecast_arrival)}</span></span></button>
+    ${ak ? `<div class="ibx-a ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#248A3D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>В работе с ${ak.at}${ak.user && ak.user !== S.me?.user ? ' · ' + esc(ak.user) : ''}</div>`
+      : `<div class="ibx-a"><button class="acc" data-acc="${v.tr_id}" title="Принять в работу">Принять</button><button class="snz" data-snz="${v.tr_id}">Отложить</button></div>`}</div>`;
+}
+function inboxHtml() {
+  const it = inboxItems(), tab = S.inboxTab;
+  const tabs = `<div class="segctl ibx-tabs" role="tablist">${[['new', 'Новые', it.fresh.length], ['work', 'В работе', it.work.length], ['done', 'Завершено', S.done.length]]
+    .map(([k, l, n]) => `<button data-ib="${k}" class="${tab === k ? 'on' : ''}">${l}${n ? `<b class="cnt">${n}</b>` : ''}</button>`).join('')}</div>`;
+  const rows = tab === 'new' ? it.fresh.map(evCard) : tab === 'work' ? it.work.map(evCard)
+    : doneList().map(d => { const c = RISK[d.kind] || RISK.none; return `<div class="ibx done"><button class="ibx-main" data-tr="${d.tr}"><span class="ibx-t">
+        <span class="ibx-h"><b>ТС ${d.tr}</b><span class="kind" style="background:${c.bg};color:${c.text}">${d.kind === 'early' ? 'Раньше плана' : 'Опоздание'} ${mins(d.amount)}</span></span>
+        <span class="ibx-c">${esc(d.stop || '')}</span><span class="cap">${hhmm(d.since)}–${hhmm(d.closed)}</span>
+        <span class="dst ${d.ack ? 'ok' : ''}">${d.ack ? '✓ принято в работу в ' + d.ack : 'без решения диспетчера'}</span></span></button></div>`; });
+  const empty = {new: ['Новых событий нет', 'Все машины идут по графику'], work: ['В работе ничего нет', 'Принятые события будут здесь до проезда остановки'],
+                 done: S.done.length ? ['Нет событий с таким статусом', 'Выберите другой фильтр'] : ['Завершённых пока нет', 'Сюда попадают события, когда остановка пройдена или риск ушёл']}[tab];
+  const keys = it.snoozed ? `<div class="ibx-keys">Отложено: ${it.snoozed}</div>` : '';
+  const nAck = S.done.filter(d => d.ack).length;
+  const dflt = tab === 'done' && S.done.length ? `<div class="dflt" role="group" aria-label="Фильтр завершённых">${[['all', 'Все', S.done.length], ['ack', 'Приняты в работу', nAck], ['noack', 'Без решения', S.done.length - nAck]]
+    .map(([k, l, n]) => `<button data-df="${k}" class="${S.doneF === k ? 'on' : ''}">${l} <b>${n}</b></button>`).join('')}</div>` : '';
+  return tabs + dflt + (rows.length ? rows.join('') : `<div class="empty ibx-empty"><b>${empty[0]}</b>${empty[1]}</div>`) + keys;
+}
+S.doneF = 'all';
+const doneList = () => S.done.filter(d => S.doneF === 'all' || (S.doneF === 'ack') === !!d.ack);
+function ackEvent(tr) {
+  const v = S.state?.vehicles.find(x => x.tr_id === tr); if (!v || !isRisk(v) || S.ack[tr]) return;
+  const i = v.incident;
+  S.ack[tr] = {at: hhmm(S.state.stream.stream_time), sample_id: i.sample_id};
+  post('/api/actions', {tr_id: tr, kind:'ack', detail:{sample_id: i.sample_id, target_stop_id: i.target_stop_id, target_name: i.target_name,
+    target_time_begin: i.target_time_begin, risk: v.risk, signal_at: S.active[tr]?.since}});
+  toast('Принято в работу', `ТС ${tr} · событие остаётся в списке до проезда остановки`);
+  S.listHtml = ''; S.lnKey = null; S.cardKey = null; render();
+}
+function unackEvent(tr) {
+  if (!S.ack[tr]) return;
+  post('/api/actions', {tr_id: tr, kind:'ack_cancel', detail:{sample_id: S.ack[tr].sample_id}});
+  delete S.ack[tr]; S.listHtml = ''; S.lnKey = null; S.cardKey = null; render();
+}
+function acceptAlert(tr) {
+  if (S.ack[tr]) return;
+  ackEvent(tr);
+  if (S.view === 'lines') { const next = inboxItems().fresh[0]; if (next) lnSelect(next.tr_id); }
+}
+function snoozeAlert(tr) {
+  const v = S.state?.vehicles.find(x => x.tr_id === tr); if (!v || !isRisk(v) || S.ack[tr]) return;
+  S.snoozed[tr] = Date.now();
+  toast('Отложено на минуту', 'ТС ' + tr);
+  const next = inboxItems().fresh[0]; S.sel = next ? next.tr_id : S.sel;
+  S.listHtml = ''; render();
+}
+
+// ---------- общие блоки карточки события (карта и ленты) ----------
+const ago = (s) => s == null ? 'нет данных' : s < 5 ? 'только что' : s < 60 ? Math.round(s) + ' с назад' : Math.round(s / 60) + ' мин назад';
+// «остановка №53699433966» → «ост. №…433966»: у части остановок в данных нет названия
+const sn = (n) => { const m = /^остановка №(\d+)$/.exec(n || ''); return m ? `ост. №…${m[1].slice(-6)}` : (n || '—'); };
+const m1 = (s) => (s >= 0 ? '+' : '−') + (Math.abs(s) / 60).toFixed(1).replace('.', ',');
+const ivText = (iv) => `от ${m1(iv[0])} до ${m1(iv[1])} мин`;
+function evHead(v) {
+  const i = v.incident;
+  if (!i) return v.no_data ? 'Нет телеметрии' : v.stale ? 'Нет связи' : 'Ждём прогноз';
+  if (!isRisk(v)) return 'Идёт по графику';
+  return (isEarly(v) ? 'Раньше плана на ' : 'Опоздание на ') + mins(i.prediction_s);
+}
+function evFacts(v) {
+  const i = v.incident; if (!i) return '';
+  const stop = `<div class="li"><span class="k">Остановка</span><span class="v" title="${esc(i.target_name)}">${esc(sn(i.target_name))}<span class="cap vv">после ${esc(sn(i.segment.from))}</span></span></div>`;
+  const time = `<div class="li"><span class="k">Прибытие</span><span class="v">план ${hhmm(i.target_time_begin)} → прогноз ${hhmm(i.forecast_arrival)}</span></div>`;
+  // упреждение считается в момент выдачи (10–15 мин по плану); «через N мин» выше — сколько осталось сейчас
+  const warn = `<div class="li"><span class="k">Предупреждение</span><span class="v">выдано в ${hhmm(i.issued_at)}<span class="cap vv">за ${Math.round(i.lead_min)} мин до события по плану</span></span></div>`;
+  const fresh = `<div class="li"><span class="k">Данные</span><span class="v">GPS ${ago(v.age_s)}<span class="cap vv">прогноз ${ago(i.forecast_age_s)}</span></span></div>`;
+  if (!isRisk(v)) return `<div class="group">${stop}${time}${fresh}</div>`;  // без события — только главное
+  const pr = isEarly(v) ? 'недоступна<span class="cap vv">модель оценивает только опоздание</span>' : i.p_late == null ? 'недоступна' : Math.round(i.p_late * 100) + '%<span class="cap vv">опоздание больше 2 мин</span>';
+  return `<div class="group">${stop}${time}${warn}
+    <div class="li"><span class="k">Вероятность</span><span class="v">${pr}</span></div>
+    ${i.interval_s ? `<div class="li"><span class="k">Интервал ~80%</span><span class="v">${ivText(i.interval_s)}</span></div>` : ''}
+    ${fresh}
+    ${i.manual_target ? `<div class="li note">Плановое время этой остановки внесено вручную. По фактическим данным на таких остановках отклонение почти всегда 0 (95% случаев), поэтому прогноз 0. Текущее отставание по GPS — в блоке «Сейчас».</div>` : ''}</div>`;
+}
+function evWhy(v, col) {
+  const causes = (v.incident?.causes || []).filter(x => x.factor !== 'fallback');
+  if (!causes.length || !isRisk(v)) return '';
+  const cmax = Math.max(1, ...causes.map(x => Math.abs(x.contribution_s)));
+  const one = (x) => `<div class="why"><div class="wl"><span>${esc(x.text)}</span><b>${x.contribution_s >= 0 ? '+' : '−'}${Math.round(Math.abs(x.contribution_s))} с</b></div><div class="bar"><div style="width:${Math.round(Math.abs(x.contribution_s) / cmax * 100)}%;background:${col}"></div></div></div>`;
+  return `<div class="gh">Вероятная причина</div><div class="group">${causes.slice(0, 3).map(one).join('')}</div>
+    <div class="warn">Вклад признаков в прогноз модели. Замедление по GPS не доказывает пробку, посадку или красный сигнал — это гипотеза.</div>`;
+}
+// рекомендации диспетчеру: мера под причину сбоя + оценка модели (what-if), где она есть
+const REC_BY_CAUSE = {
+  standstill:   {k:'call',   t:'Связаться с водителем', d:'Выяснить причину простоя: долгая посадка, неисправность, затор', wi:'short_dwell'},
+  slow_segment: {k:'signal', t:'Приоритет на светофорах', d:'Запросить приоритетный проезд на участке', wi:'signal_priority'},
+  accumulated:  {k:'reserve', t:'Резерв или укороченный рейс', d:'Рассмотреть выпуск резервного ТС или укороченный рейс, чтобы не нарушить интервал'},
+  trend:        {k:'reserve', t:'Резерв или укороченный рейс', d:'Отставание растёт — подготовить резервное ТС, чтобы не нарушить интервал'},
+  history:      {k:'warn',   t:'Предупредить водителя об участке', d:'Участок проблемный по прошлым кругам — проверить объезд'},
+  place:        {k:'warn',   t:'Предупредить водителя об участке', d:'На этом участке задержки случаются регулярно — проверить объезд'},
+  layover:      {k:'layover', t:'Сократить отстой на конечной', d:'Если позволяет режим труда и отдыха водителя'},
+  telemetry:    {k:'link',   t:'Проверить связь с бортом', d:'Нет свежих данных — прогноз менее надёжен'},
+};
+const WI_REC = {signal_priority: {k:'signal', t:'Приоритет на светофорах', d:'Запросить приоритетный проезд на участке'},
+                short_dwell: {k:'dwell', t:'Сократить стоянки на остановках', d:'Попросить водителя не задерживаться на посадке'}};
+function evRecs(v) {
+  const i = v.incident; if (!i || !isRisk(v)) return '';
+  const recs = [];
+  if (isEarly(v)) {
+    recs.push({t:'Придержать на остановке', d:`Задержать отправление с ${sn(i.target_name)} примерно на ${mins(i.prediction_s)}, чтобы не уехать раньше графика`});
+  } else {
+    const wi = S.whatif[i.sample_id], base = wi?.find(o => o.scenario === 'none');
+    const est = (sc) => { const o = wi?.find(x => x.scenario === sc); return o && base ? {from: base.prediction_s, to: o.prediction_s} : null; };
+    const seen = new Set();
+    for (const c of (i.causes || []).filter(x => x.factor !== 'fallback' && x.contribution_s > 0)) {
+      const r = REC_BY_CAUSE[c.factor]; if (!r || seen.has(r.k)) continue;
+      seen.add(r.k); recs.push({...r, est: r.wi ? est(r.wi) : null});
+    }
+    // меры, для которых модель умеет оценить эффект, — всегда в списке, если заметно помогают
+    for (const [sc, r] of Object.entries(WI_REC)) {
+      const e = est(sc); if (!e || seen.has(r.k) || e.from - e.to < 20) continue;
+      seen.add(r.k); recs.push({...r, est: e});
+    }
+    if (!recs.length) recs.push({t:'Наблюдать', d:'Явной причины нет — отслеживать, как меняется прогноз'});
+    recs.sort((a, b) => ((b.est ? b.est.from - b.est.to : 0) - (a.est ? a.est.from - a.est.to : 0)));
+  }
+  const row = (r, j) => `<div class="rec"><span class="rn">${j + 1}</span><span class="rt"><b>${esc(r.t)}</b><span class="cap">${esc(r.d)}</span>
+      ${r.est ? `<span class="re ${r.est.from - r.est.to >= 30 ? 'ok' : ''}">по модели: ${sgn(r.est.from)} → ${sgn(r.est.to)}${r.est.from - r.est.to < 6 ? ' · эффект незначителен' : ''}</span>` : ''}</span></div>`;
+  return `<div class="gh">Рекомендации</div><div class="group recs">${recs.slice(0, 3).map(row).join('')}</div>
+    <div class="warn">Подсказка по признакам сбоя. Эффект мер «по модели» — пересчёт прогноза при изменённых скорости и простое, на фактах не проверен; команд водителю и светофорам система не отправляет.</div>`;
+}
+
+function evLog(v) {
+  const a = S.active[v.tr_id], k = S.ack[v.tr_id], rows = [];
+  if (a) rows.push([hhmm(a.since), 'Сигнал: ' + evKind(v).toLowerCase()]);
+  if (k) rows.push([k.at, 'Принято в работу' + (k.user ? ' · ' + k.user : '')]);
+  S.done.filter(d => d.tr === v.tr_id).slice(0, 3).forEach(d => rows.push([hhmm(d.closed), `Завершено: ${d.kind === 'early' ? 'раньше плана' : 'опоздание'}${d.ack ? '' : ' (без принятия)'}`]));
+  return rows.length ? `<div class="gh">Журнал</div><div class="group">${rows.map(r => `<div class="li"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>` : '';
+}
+function evAck(v, id) {
+  if (!isRisk(v)) return '';
+  const k = S.ack[v.tr_id];
+  return `<button class="cta" id="${id}" style="background:${k ? 'var(--green-bg)' : 'var(--blue)'};color:${k ? 'var(--green-t)' : '#fff'}">${k ? '✓ В работе с ' + k.at + (k.user && k.user !== S.me?.user ? ' · ' + esc(k.user) : '') : 'Принять'}</button>
+    <div class="cap" style="text-align:center;padding:0 16px">${k ? 'Событие закроется после проезда остановки · нажмите, чтобы отменить' : 'Отметка для смены: сигнал увиден, диспетчер разбирается'}</div>`;
+}
+
+async function loadRibbons() {
+  if (S.view !== 'lines') return;
+  try { const r = await fetch('/api/ribbons'); if (r.ok) { S.rib = await r.json(); renderLines(); } } catch (e) {}
+}
+async function loadThread(tr) {
+  if (!tr) return;
+  try { const r = await fetch(`/api/vehicles/${tr}/thread`); S.thread[tr] = r.ok ? await r.json() : {none:true}; renderLines(); } catch (e) {}
+}
+const isRiskV = (v) => !v.stale && (v.risk === 'red' || v.risk === 'yellow' || v.risk === 'early');
+function ribbonHtml(r) {
+  const vs = r.vehicles, w = RISK[['red', 'yellow', 'early', 'green', 'none'][r.worst]];
+  const known = vs.filter(v => v.deviation_s != null), onTime = known.filter(v => Math.abs(v.deviation_s) <= 120).length;
+  const ring = r.from === r.to, name = ring ? `${esc(r.from)} <span class="cap">· кольцевой</span>` : `${esc(r.from)} → ${esc(r.to)}`;
+  const step = Math.max(1, Math.ceil(r.ticks.length / 150));
+  const ticks = r.ticks.filter((_, j) => j % step === 0 || j === r.ticks.length - 1).map(x => `<i class="tk" style="left:${(x * 100).toFixed(2)}%"></i>`).join('');
+  let bunch = '';
+  const gps = vs.filter(v => !v.no_gps && v.trip_state === 'on');  // пары — только среди машин в рейсе
+  for (let j = 0; j + 1 < gps.length; j++) {
+    const a = gps[j], b = gps[j + 1];
+    if (!a.stale && !b.stale && (b.x - a.x) * r.length_km < 0.4) bunch += `<i class="bn" style="left:calc(${(a.x * 100).toFixed(2)}% - 8px);width:calc(${((b.x - a.x) * 100).toFixed(2)}% + 16px)"></i>`;
+  }
+  const lag = vs.map(v => {
+    if (v.no_gps || v.stale || Math.abs(v.deviation_s ?? 0) < 60) return '';
+    const a = Math.min(v.x, v.gx), b = Math.max(v.x, v.gx), late = v.gx > v.x;
+    return `<i class="lg" style="left:${(a * 100).toFixed(2)}%;width:${((b - a) * 100).toFixed(2)}%;background:${late ? (v.risk === 'red' ? 'rgba(255,59,48,.22)' : 'rgba(255,204,0,.38)') : 'rgba(52,199,89,.22)'}"></i><i class="ghost" style="left:${(v.gx * 100).toFixed(2)}%" title="Где ТС ${v.tr_id} должен быть по графику"></i>`;
+  }).join('');
+  const dots = vs.map(v => {
+    const offTxt = v.trip_state === 'before' ? `до рейса ${v.trip_start_min} мин` : v.trip_state === 'after' ? 'рейс окончен' : '';
+    if (offTxt && !v.no_gps) return `<button class="vd nogps off ${v.tr_id === S.sel ? 'sel' : ''} ${v.x < .12 ? 'edge-l' : v.x > .88 ? 'edge-r' : ''}" data-tr="${v.tr_id}" style="left:${(v.x * 100).toFixed(2)}%" title="ТС ${v.tr_id}: вне рейса — ${offTxt}"><span>${offTxt}</span>${busIcon('#8E8E93', 10)}</button>`;
+    if (v.no_gps) return `<button class="vd nogps ${v.tr_id === S.sel ? 'sel' : ''} ${v.gx < .12 ? 'edge-l' : v.gx > .88 ? 'edge-r' : ''}" data-tr="${v.tr_id}" style="left:${(v.gx * 100).toFixed(2)}%" title="ТС ${v.tr_id}: нет GPS${v.gps_age_s != null ? ' ' + ago(v.gps_age_s).replace(' назад', '') : ''} — положение неизвестно, кружок стоит там, где ТС должен быть по графику"><span>нет GPS</span>?</button>`;
+    const c = RISK[v.stale ? 'none' : v.risk], sel = v.tr_id === S.sel;
+    return `<button class="vd ${sel ? 'sel' : ''}" data-tr="${v.tr_id}" style="left:${(v.x * 100).toFixed(2)}%;background:${c.fill};${sel ? `box-shadow:0 0 0 5px ${c.fill}55,0 1px 3px rgba(0,0,0,.3)` : ''}" title="ТС ${v.tr_id}${v.deviation_s != null ? ' · ' + (v.deviation_s >= 0 ? 'отстаёт ' : 'опережает ') + mins(v.deviation_s) : ''}"><svg width="9" height="9" viewBox="0 0 10 10"><path d="M2 1.5 8.5 5 2 8.5 3.6 5z" fill="${c.fg}"/></svg></button>`;
+  }).join('');
+  const bad = vs.filter(v => v.incident && (v.risk === 'red' || v.risk === 'yellow')).sort((a, b) => b.incident.prediction_s - a.incident.prediction_s)[0];
+  const nog = vs.filter(v => v.no_gps), offv = vs.filter(v => v.trip_state !== 'on');
+  const note = offv.length === vs.length ? `вне рейса: ${offv[0].trip_state === 'before' ? 'следующий рейс через ' + offv[0].trip_start_min + ' мин' : 'последний рейс закончился ' + offv[0].trip_end_ago_min + ' мин назад'}` : nog.length ? `нет GPS${nog[0].gps_age_s != null ? ' ' + ago(nog[0].gps_age_s).replace(' назад', '') : ' с начала потока'} — показано плановое положение` : bad ? `ТС ${bad.tr_id} ${bad.deviation_s != null && bad.deviation_s >= 60 ? 'отстаёт на ' + mins(bad.deviation_s) : 'под риском'}` : bunch ? 'сбились в пару' : '';
+  const sel = vs.some(v => v.tr_id === S.sel);
+  return `<div class="rb ${sel ? 'sel' : ''} ${r.on_trip ? '' : 'offtrip'}" data-pid="${r.pid}">
+    <div class="rb-h">${vs.map(v => `<span class="bdg" style="background:${isRiskV(v) ? RISK[v.risk].fill : '#E8E8ED'};color:${isRiskV(v) ? RISK[v.risk].fg : '#1D1D1F'}">ТС ${v.tr_id}</span>${v.no_gps ? '<span class="kind" style="background:#F2F2F7;color:#6E6E73">нет GPS</span>' : v.trip_state !== 'on' ? '<span class="kind" style="background:#F2F2F7;color:#6E6E73">вне рейса</span>' : ''}`).join('')}
+      <span class="rb-n">${name}</span>
+      <span class="rb-s">${r.headway_min ? `интервал по плану <b>${r.headway_min} мин</b> · ` : ''}${known.length ? `по графику <b style="color:${onTime === known.length ? 'var(--green-t)' : onTime / known.length >= .7 ? 'var(--yellow-t)' : 'var(--red-t)'}">${onTime} из ${known.length}</b> · ` : ''}${String(r.length_km).replace('.', ',')} км</span></div>
+    <div class="track"><i class="ln"></i>${ticks}${bunch}${lag}${dots}</div>
+    <div class="rb-f"><span>${ring ? 'начало маршрута' : esc(r.from)}</span><span>${esc(note)}</span><span>${ring ? 'конец маршрута' : esc(r.to)}</span></div></div>`;
+}
+function threadSvg(th, v) {
+  if (!th || th.none) return '<div class="cap" style="padding:14px 0 6px;text-align:center">Машина сейчас не в рейсе — нитки графика нет</div>';
+  const W = 312, H = 168, x0 = 30, x1 = 306, y0 = 150, y1 = 14, now = th.now, t0 = now - 20 * 60, t1 = now + 25 * 60;
+  const st = th.stops, i = v?.incident, pred = th.target ? th.target.prediction_s : (th.deviation_s ?? 0);
+  const dev = th.deviation_s ?? 0;
+  const interp = (t, xs, ys) => { if (t <= xs[0]) return ys[0]; for (let j = 1; j < xs.length; j++) if (t <= xs[j]) return ys[j - 1] + (ys[j] - ys[j - 1]) * (t - xs[j - 1]) / Math.max(1, xs[j] - xs[j - 1]); return ys[ys.length - 1]; };
+  const T = st.map(s => s.t), D = st.map(s => s.d);
+  const dNow = interp(now - dev, T, D);
+  const fc = [[now, dNow]];
+  if (th.target) fc.push([th.target.t + pred, th.target.d]);
+  st.forEach(s => { if (!th.target || s.d > th.target.d) if (s.t + pred > now) fc.push([s.t + pred, s.d]); });
+  fc.sort((a, b) => a[0] - b[0]);
+  const fact = st.filter(s => s.fact).map(s => [s.fact, s.d]).concat([[now, dNow]]);
+  const inWin = (p) => p[0] >= t0 - 300 && p[0] <= t1 + 300;
+  const ds = [...st.map(s => [s.t, s.d]), ...fact, ...fc].filter(inWin).map(p => p[1]);
+  let dmin = Math.min(...ds, dNow), dmax = Math.max(...ds, dNow); if (dmax - dmin < 1) { dmax += .5; dmin -= .5; }
+  const X = (t) => (x0 + (t - t0) / (t1 - t0) * (x1 - x0)).toFixed(1), Y = (d) => (y0 - (d - dmin) / (dmax - dmin) * (y0 - y1)).toFixed(1);
+  const pl = (pts) => pts.map(p => X(p[0]) + ',' + Y(p[1])).join(' ');
+  const c = RISK[v?.risk || 'none'];
+  const ev = th.target ? [th.target.t + pred, th.target.d] : null;
+  return `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Нитка графика: план, факт и прогноз">
+    <defs><clipPath id="thc"><rect x="${x0}" y="4" width="${x1 - x0}" height="${H - 12}"/></clipPath></defs>
+    <g stroke="#E5E5EA"><path d="M${x0} ${y1}H${x1}M${x0} ${(y0 + y1) / 2}H${x1}M${x0} ${y0}H${x1}"/></g>
+    <rect x="${X(now + 600)}" y="10" width="${(X(now + 900) - X(now + 600)).toFixed(1)}" height="144" fill="#0A84FF" fill-opacity=".08"/>
+    <g clip-path="url(#thc)"><polyline points="${pl(st.map(s => [s.t, s.d]))}" fill="none" stroke="#AEAEB2" stroke-width="2"/>
+    ${st.filter(s => s.t > t0 && s.t < t1).map(s => `<circle cx="${X(s.t)}" cy="${Y(s.d)}" r="1.8" fill="#AEAEB2"/>`).join('')}
+    <polyline points="${pl(fact)}" fill="none" stroke="#0A84FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="${pl(fc)}" fill="none" stroke="${c.fill}" stroke-width="3" stroke-dasharray="6 5" stroke-linecap="round"/>
+    ${ev ? `<circle cx="${X(ev[0])}" cy="${Y(ev[1])}" r="6" fill="${c.fill}" stroke="#fff" stroke-width="2"/>` : ''}</g>
+    <path d="M${X(now)} 8V154" stroke="#1D1D1F" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="${X(now)}" y="166" font-size="9" fill="#1D1D1F" text-anchor="middle">сейчас</text>
+    <text x="${x0}" y="166" font-size="9" fill="#8E8E93">${hhmm(t0)}</text><text x="${x1}" y="166" font-size="9" fill="#8E8E93" text-anchor="end">${hhmm(t1)}</text>
+    <text x="2" y="18" font-size="9" fill="#8E8E93">даль.</text><text x="2" y="153" font-size="9" fill="#8E8E93">ближ.</text></svg>`;
+}
+// мини-карта в карточке события: где машина сейчас, её рейс и целевая остановка; подложка — как в настройках
+let mini = null;
+function miniOpenBig() { const t = S.sel; setView('map'); select(t, true); }
+function miniEnsure() {
+  const kind = S.provider === 'yandex' && window.ymaps && ymaps.Map ? 'yandex' : 'osm';
+  $('#lnMini').classList.toggle('muted', !!S.muted);
+  if (mini && mini.kind === kind) return mini;
+  if (mini) { try { mini.kind === 'osm' ? mini.map.remove() : mini.map.destroy(); } catch (e) {} }
+  const host = $('#lnMini'); host.innerHTML = '<div style="width:100%;height:100%"></div>'; const el = host.firstChild;
+  if (kind === 'osm') {
+    const m = L.map(el, {zoomControl:false, scrollWheelZoom:false}).setView([55.75, 37.62], 12);
+    m.attributionControl.setPrefix(false);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
+    mini = {kind, map:m, layer:L.layerGroup().addTo(m)};
+    m.on('click', miniOpenBig);
+  } else {
+    const m = new ymaps.Map(el, {center:[55.75, 37.62], zoom:12, controls:[]}, {suppressMapOpenBlock:true, yandexMapDisablePoiInteractivity:true});
+    m.behaviors.disable('scrollZoom'); m.events.add('click', miniOpenBig);
+    mini = {kind, map:m};
+  }
+  S.miniKey = null; S.miniTr = null;
+  return mini;
+}
+function renderMini(v) {
+  const box = $('#lnMiniBox');
+  if (!v || S.view !== 'lines') { box.style.display = 'none'; return; }
+  box.style.display = '';
+  const mm = miniEnsure(), m = mm.map;
+  if (mm.kind === 'osm') m.invalidateSize(); else m.container.fitToViewport();
+  const i = v.incident, c = RISK[v.stale ? 'none' : v.risk];
+  $('#lnMiniNote').textContent = v.lat == null ? 'Нет GPS — положение неизвестно' : v.stale ? `Последняя известная точка · GPS ${ago(v.age_s)}` : `${Math.round(v.speed)} км/ч · GPS ${ago(v.age_s)} · нажмите на карту, чтобы открыть большую`;
+  const key = JSON.stringify([mm.kind, v.tr_id, v.lat, v.lon, c.fill, v.pattern, i?.target_stop_id, S.routesVersion]);
+  if (key === S.miniKey) return;
+  const first = S.miniTr !== v.tr_id; S.miniKey = key; S.miniTr = v.tr_id;
+  const line = S.routes?.[v.tr_id]?.patterns?.[v.pattern];
+  const tgt = i && isRisk(v) ? [i.target_lat, i.target_lon] : null, me = v.lat != null ? [v.lat, v.lon] : null;
+  const pts = [me, tgt].filter(Boolean);
+  if (mm.kind === 'osm') {
+    mm.layer.clearLayers();
+    if (line?.length > 1) L.polyline(line, {color:'#0A84FF', weight:4, opacity:.55}).addTo(mm.layer);
+    if (tgt) L.circleMarker(tgt, {radius:6, color:'#fff', weight:2, fillColor:c.fill, fillOpacity:1}).bindTooltip(esc(i.target_name), {direction:'top'}).addTo(mm.layer);
+    if (me) L.circleMarker(me, {radius:9, color:'#fff', weight:3, fillColor:c.fill, fillOpacity:1}).bindTooltip('ТС ' + v.tr_id, {direction:'top'}).addTo(mm.layer);
+    if (first || (me && !m.getBounds().pad(-0.15).contains(me))) {
+      if (pts.length === 2) m.fitBounds(L.latLngBounds(pts).pad(0.35), {maxZoom:16});
+      else if (pts.length) m.setView(pts[0], 15);
+      else if (line?.length > 1) m.fitBounds(L.latLngBounds(line).pad(0.05));
+    }
+  } else {
+    m.geoObjects.removeAll();
+    if (line?.length > 1) m.geoObjects.add(new ymaps.Polyline(line, {}, {strokeColor:'#0A84FF', strokeWidth:4, strokeOpacity:.55}));
+    if (tgt) m.geoObjects.add(new ymaps.Placemark(tgt, {hintContent: i.target_name}, {preset:'islands#circleIcon', iconColor:c.fill}));
+    if (me) m.geoObjects.add(new ymaps.Placemark(me, {hintContent: 'ТС ' + v.tr_id}, {preset:'islands#circleDotIcon', iconColor:c.fill}));
+    const inView = me && ymaps.util.bounds.containsPoint(m.getBounds(), me);
+    if (first || (me && !inView)) {
+      if (pts.length === 2) m.setBounds(ymaps.util.bounds.fromPoints(pts), {checkZoomRange:true, zoomMargin:40});
+      else if (pts.length) m.setCenter(pts[0], 15);
+      else if (line?.length > 1) m.setBounds(ymaps.util.bounds.fromPoints(line), {zoomMargin:10});
+    }
+  }
+}
+function incidentHtml(v) {
+  if (!v) return `<div class="ln-none"><b>Выберите ТС</b><span class="sub">на ленте или во входящих слева — здесь появятся нитка графика, остановка, время и журнал</span></div>`;
+  const i = v.incident, c = RISK[v.stale ? 'none' : v.risk], r = isRisk(v);
+  return `<div class="ln-ih"><span class="bdg" style="background:${c.fill};color:${c.fg}">${short(v.tr_id)}</span><span class="sub">ТС ${v.tr_id} · борт ${v.unit_id ?? '—'}</span>${r ? `<span class="tag" style="margin-left:auto;background:${c.bg};color:${c.text}">${c.tag}</span>` : ''}</div>
+    <div class="ln-hl" style="color:${r ? c.text : 'var(--label)'}">${evHead(v)}</div>
+    ${i ? `<div class="sub">${r ? '' : 'следующая цель: '}${esc(sn(i.target_name))} · через ${i.eta_min} мин</div>` : ''}
+    <div class="ln-th"><div class="ln-th-h"><b>Нитка графика</b><span class="cap">путь по рейсу × время</span></div>${threadSvg(S.thread[v.tr_id], v)}
+      <div class="ln-leg" style="${!S.thread[v.tr_id] || S.thread[v.tr_id].none ? 'display:none' : ''}"><span><i style="background:#AEAEB2;height:2px"></i>план</span><span><i style="background:#0A84FF"></i>факт</span><span><i style="background:${c.fill}"></i>прогноз</span><span><i style="background:rgba(10,132,255,.14);height:8px"></i>окно 10–15 мин</span></div></div>
+    <div class="ln-body">${evFacts(v)}${evRecs(v)}${evWhy(v, c.fill)}${evLog(v)}</div>`;
+}
+function renderLines() {
+  if (S.view !== 'lines' || !S.state) return;
+  const rib = S.rib, n = rib ? rib.rows.reduce((a, r) => a + r.vehicles.length, 0) : 0;
+  const rp = S.state.stream.replay || {}, arch = S.state.stream.source === 'demo' ? `<span class="ln-arch" title="${isSynth() ? 'Синтетические данные' : 'Архив телеметрии 06.01.2026'} — не текущая обстановка в городе">${srcShort()}${rp.speed > 1 ? ' · ×' + rp.speed : ''}</span>` : '';
+  const allV = rib ? rib.rows.flatMap(r => r.vehicles) : [], onN = allV.filter(v => v.trip_state === 'on').length;
+  setHtml($('#lnSub'), (rib ? `${rib.rows.length} ${plural(rib.rows.length, 'маршрут', 'маршрута', 'маршрутов')} · ${onN} ТС в рейсе${allV.length - onN ? ` · ${allV.length - onN} вне рейса` : ''}` : 'загрузка…') + arch);
+  setHtml($('#lnRows'), rib ? (rib.rows.length ? rib.rows.map(ribbonHtml).join('') : `<div class="empty"><b>Нет ТС в рейсе</b>Ленты появятся, когда машины выйдут на линию</div>`) : '');
+  const v = S.state.vehicles.find(x => x.tr_id === S.sel);
+  const key = JSON.stringify([S.sel, v?.risk, v?.incident?.sample_id, v?.incident?.eta_min, v && S.whatif[v.incident?.sample_id], v && S.ack[v.tr_id], S.active[S.sel]?.since, S.done.length, v?.age_s, S.thread[S.sel]?.now]);
+  if (key !== S.lnKey) {
+    S.lnKey = key; const box = $('#lnMiniBox'); $('#lnSide').insertBefore(box, $('#lnFoot'));  // карта живая — не пересоздаём
+    $('#lnInc').innerHTML = incidentHtml(v);
+    const th = $('#lnInc .ln-th'); if (th) th.after(box);
+    $('#lnFoot').innerHTML = v ? `${evAck(v, 'lnCta')}<button class="link" id="lnMap">Открыть на большой карте</button>` : ''; }
+  renderMini(v);
+}
+$('#lnRows').addEventListener('click', (e) => {
+  const d = e.target.closest('.vd'); if (d) { lnSelect(+d.dataset.tr); return; }
+  const rb = e.target.closest('.rb'); if (!rb) return;
+  const r = S.rib?.rows.find(x => x.pid === rb.dataset.pid); if (!r) return;
+  const order = {red:0, yellow:1, early:2, green:3, none:4};
+  lnSelect(r.vehicles.slice().sort((a, b) => order[a.risk] - order[b.risk])[0].tr_id);
+});
+$('#lnSide').addEventListener('click', (e) => {
+  const v = S.state?.vehicles.find(x => x.tr_id === S.sel); if (!v) return;
+  if (e.target.closest('#lnCta')) { S.ack[v.tr_id] ? unackEvent(v.tr_id) : acceptAlert(v.tr_id); return; }
+  if (e.target.closest('#lnMap')) { setView('map'); select(v.tr_id, true); }
+});
+function lnSelect(tr) {
+  S.sel = tr; S.opt = 0; S.listHtml = ''; S.lnKey = null;
+  const v = S.state?.vehicles.find(x => x.tr_id === tr);
+  loadWhatIf(v); loadThread(tr); render();
+}
+setInterval(() => { if (S.view === 'lines' && S.sel) loadThread(S.sel); }, 5000);
+setView('map');
+document.addEventListener('fullscreenchange', () => { if ($('#settings').style.display === 'flex') renderSettings(); setTimeout(() => { map.invalidateSize(); }, 200); });
+async function loadDatasets() { try { const r = await fetch('/api/datasets'); if (r.ok) S.datasets = (await r.json()).datasets; } catch (e) {} }
+loadDatasets();
+</script>
+</body>
+</html>

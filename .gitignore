@@ -1,0 +1,17 @@
+# данные хакатона и секреты
+data
+.env
+# промежуточные результаты (пересобираются make/скриптами)
+output/*
+!output/submission.csv
+!output/cache/
+output/cache/*
+!output/cache/routes_matched.json
+!output/cache/trip_patterns.json
+!output/cache/route_segments_v2.json
+!output/cache/trip_patterns_v2.json
+catboost_info/
+__pycache__/
+.venv/
+docs/html/
+osrm/

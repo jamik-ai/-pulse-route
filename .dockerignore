@@ -1,0 +1,9 @@
+.git
+.env
+data
+output
+docs/html
+catboost_info
+**/__pycache__
+.venv
+osrm

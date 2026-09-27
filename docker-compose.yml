@@ -1,0 +1,68 @@
+# Пульс маршрута — три модуля: ML-сервис, backend (NDTP + API + дашборд), эмулятор NDTP.
+#   cp .env.example .env            # логин/пароль дашборда, путь к датасету
+#   docker compose up -d --build    # → http://localhost:8080 , Swagger /docs , ML :8001/docs
+#   docker load -i <датасет>/ndtp-telemetry-emulator.tar && docker compose --profile emulator up -d emulator
+x-app: &app
+  build: .
+  image: pulse-route:latest
+  env_file: [{path: .env, required: false}]
+  volumes:
+    - ${DATASET_DIR:-./data}:/app/data:ro   # датасет хакатона (train/test/validate)
+    - ./output:/app/output                  # сабмит, кэши маршрутов, журналы
+  restart: unless-stopped
+
+services:
+  ml:
+    <<: *app
+    container_name: delay-ml
+    command: uvicorn src.ml_service.app:app --host 0.0.0.0 --port 8001
+    ports: ["127.0.0.1:8001:8001"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 5s
+      retries: 30
+
+  backend:
+    <<: *app
+    container_name: ndtp-server            # имя = хост для эмулятора (scripts/emulator_start.sh)
+    environment:
+      ML_URL: http://ml:8001
+      PLAN_SPLIT: validate
+      HINTS: data/validate/points.csv
+    command: uvicorn src.backend.app:app --host 0.0.0.0 --port 8080
+    ports: ["127.0.0.1:8080:8080"]         # наружу — через reverse proxy с TLS (см. README)
+    depends_on:
+      ml: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 5s
+      retries: 30
+
+  backend-synth:                           # отдельный стенд с синтетикой «3 машины на маршруте» (не мешает основному)
+    <<: *app
+    container_name: ndtp-server-synth
+    profiles: [synth]
+    environment:
+      ML_URL: http://ml:8001
+      PLAN_SPLIT: synthetic
+      DATASET_STATE: dataset_synth.txt
+      AUTO_REPLAY_SPEED: "5"
+    command: uvicorn src.backend.app:app --host 0.0.0.0 --port 8080
+    ports: ["127.0.0.1:8082:8080"]
+    depends_on:
+      ml: {condition: service_healthy}
+
+  router:                                  # свой OSRM (карта Москвы): ./scripts/osrm_prepare.sh, затем ROUTER_URL=http://router:5000
+    image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+    container_name: pulse-router
+    profiles: [router]
+    command: osrm-routed --algorithm mld /data/map.osrm
+    volumes: ["./osrm:/data:ro"]
+    restart: unless-stopped
+
+  emulator:                                # образ из архива организаторов: docker load -i ndtp-telemetry-emulator.tar
+    image: ndtp-telemetry-emulator:1.0
+    container_name: ndtp-emu
+    profiles: [emulator]
+    ports: ["127.0.0.1:18080:18080"]
+    restart: unless-stopped

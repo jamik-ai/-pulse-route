@@ -1,0 +1,336 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Пульс маршрута — ML service",
+  "description": "Инференс ансамбля CatBoost: задержка на целевой остановке через 10–15 мин, вероятность опоздания, интервал ~80% и причины (SHAP).",
+  "version": "1.0.0"
+ },
+ "paths": {
+  "/health": {
+   "get": {
+    "summary": "Health",
+    "operationId": "health_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/model": {
+   "get": {
+    "summary": "Model Info",
+    "operationId": "model_info_v1_model_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/model/reload": {
+   "post": {
+    "summary": "Перечитать модели из models/ (после дообучения)",
+    "operationId": "reload_model_v1_model_reload_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/predict": {
+   "post": {
+    "summary": "Predict",
+    "operationId": "predict_v1_predict_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PredictRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PredictResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "Cause": {
+    "properties": {
+     "factor": {
+      "type": "string",
+      "title": "Factor"
+     },
+     "contribution_s": {
+      "type": "number",
+      "title": "Contribution S"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     }
+    },
+    "type": "object",
+    "required": [
+     "factor",
+     "contribution_s",
+     "text"
+    ],
+    "title": "Cause"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "PredictItem": {
+    "properties": {
+     "prediction_s": {
+      "type": "number",
+      "title": "Prediction S",
+      "description": "Прогноз задержки, сек (+ опоздание, − опережение)"
+     },
+     "p_late": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "P Late",
+      "description": "P(опоздание > late_threshold_s)"
+     },
+     "interval_s": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Interval S",
+      "description": "Интервал ~80%, сек"
+     },
+     "expected_error_s": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Error S"
+     },
+     "causes": {
+      "items": {
+       "$ref": "#/components/schemas/Cause"
+      },
+      "type": "array",
+      "title": "Causes",
+      "default": []
+     },
+     "ops_prediction_s": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ops Prediction S",
+      "description": "Прогноз для диспетчера (совпадает с prediction_s)"
+     },
+     "ops_p_late": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ops P Late",
+      "description": "P(опоздание) для диспетчера: без правила manual_fill"
+     },
+     "ops_interval_s": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ops Interval S",
+      "description": "Интервал ~80% для диспетчера"
+     },
+     "manual_target": {
+      "type": "boolean",
+      "title": "Manual Target",
+      "description": "Плановое время цели заполнено вручную (manual_fill)",
+      "default": false
+     },
+     "model_prediction_s": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Prediction S",
+      "description": "Выход ансамбля без правила manual_fill → 0 (для справки)"
+     }
+    },
+    "type": "object",
+    "required": [
+     "prediction_s"
+    ],
+    "title": "PredictItem"
+   },
+   "PredictRequest": {
+    "properties": {
+     "items": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Items",
+      "description": "Признаки прогнозных точек (выход src.features.features_at)"
+     },
+     "explain": {
+      "type": "boolean",
+      "title": "Explain",
+      "description": "Считать причины (SHAP), +~2 мс на точку",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "items"
+    ],
+    "title": "PredictRequest"
+   },
+   "PredictResponse": {
+    "properties": {
+     "results": {
+      "items": {
+       "$ref": "#/components/schemas/PredictItem"
+      },
+      "type": "array",
+      "title": "Results"
+     },
+     "model_version": {
+      "type": "string",
+      "title": "Model Version"
+     },
+     "latency_ms": {
+      "type": "number",
+      "title": "Latency Ms"
+     }
+    },
+    "type": "object",
+    "required": [
+     "results",
+     "model_version",
+     "latency_ms"
+    ],
+    "title": "PredictResponse"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  }
+ }
+}
