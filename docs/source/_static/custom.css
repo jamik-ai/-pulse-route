@@ -1,0 +1,25 @@
+/* «Пульс маршрута»: спокойный стиль в духе дашборда */
+.sidebar-brand-text { font-weight: 700; letter-spacing: -.01em; }
+.sidebar-logo { max-width: 44px; border-radius: 10px; }
+h1 { letter-spacing: -.02em; }
+.hero { padding: 28px 28px 22px; border-radius: 18px; margin: 8px 0 26px;
+  background: linear-gradient(135deg, rgba(56,209,196,.14), rgba(10,108,255,.14)); }
+.hero p.lead { font-size: 1.15em; line-height: 1.5; margin: 0 0 14px; }
+.hero .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 8px; }
+.hero .stat { background: var(--color-background-primary); border-radius: 12px; padding: 10px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06); min-width: 0; }
+.hero .stat b { display: block; font-size: 1.35em; letter-spacing: -.02em; }
+.hero .stat span { font-size: .85em; color: var(--color-foreground-secondary); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 14px 0 24px; }
+.cards a.card { display: block; padding: 16px 16px 14px; border-radius: 14px; text-decoration: none;
+  border: 1px solid var(--color-background-border); background: var(--color-background-secondary);
+  transition: transform .12s ease, box-shadow .12s ease; }
+.cards a.card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(10,108,255,.12); }
+.cards a.card b { display: block; color: var(--color-foreground-primary); font-size: 1.02em; margin-bottom: 4px; }
+.cards a.card span { color: var(--color-foreground-secondary); font-size: .9em; line-height: 1.4; }
+img.shot, .shot img { border-radius: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.12); margin: 6px 0 4px; }
+table.docutils { border-radius: 10px; overflow: hidden; }
+table.docutils th { background: var(--color-background-secondary); }
+dl.py.class > dt, dl.py.function > dt { border-radius: 8px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .82em; font-weight: 600;
+  background: rgba(10,108,255,.12); color: var(--color-brand-primary); }

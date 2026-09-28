@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Вход — Пульс маршрута</title>
+<link rel="icon" href="/static/logo-pulse.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tektur:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{--label:#1D1D1F;--label2:#6E6E73;--label3:#86868B;--line:#D2D2D7;--blue:#0071E3;--red:#E30000;
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue","Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#fff;color:var(--label);font-family:var(--sf);-webkit-font-smoothing:antialiased}
+main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px}
+.wrap{width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.icon{width:96px;height:96px;border-radius:22px;background:#fff;border:1px solid #E8E8ED;margin-bottom:26px;box-shadow:0 18px 40px rgba(11,23,38,.28),0 2px 6px rgba(11,23,38,.2)}
+h1{margin:0 0 36px;font-family:"Tektur",var(--sf);font-size:38px;font-weight:600;letter-spacing:.01em;line-height:1.1}
+form{width:100%}
+.fields{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;text-align:left;transition:border-color .2s,box-shadow .2s}
+.fields:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,113,227,.18)}
+.fields.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(227,0,0,.12)}
+.field{position:relative;height:56px}
+.field+.field{border-top:1px solid var(--line)}
+.field input{position:absolute;inset:0;width:100%;border:none;outline:none;background:transparent;padding:22px 56px 6px 16px;font:17px var(--sf);color:var(--label)}
+.field label{position:absolute;left:16px;top:17px;font-size:17px;color:var(--label3);pointer-events:none;transition:all .15s ease;transform-origin:left top}
+.field input:focus+label,.field input:not(:placeholder-shown)+label{top:8px;font-size:12px}
+.go{position:absolute;right:12px;top:12px;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--label3);background:#fff;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.go:not(:disabled){border-color:var(--label)}
+.go:not(:disabled):hover{background:var(--label)}
+.go:not(:disabled):hover svg{stroke:#fff}
+.go:disabled{cursor:default;opacity:.5}
+.go svg{stroke:var(--label);transition:stroke .15s}
+.spin{width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--label);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.shake{animation:shake .4s ease}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.msg{min-height:22px;margin-top:12px;font-size:14px;color:var(--red)}
+.keep{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;font-size:14px;color:var(--label)}
+.keep input{width:16px;height:16px;accent-color:var(--blue)}
+.foot{margin-top:40px;padding-top:18px;border-top:1px solid #E8E8ED;width:100%;font-size:12px;color:var(--label3);line-height:1.6}
+.status{display:inline-flex;align-items:center;gap:6px}.status i{width:7px;height:7px;border-radius:50%;background:#34C759}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <div class="wrap">
+    <img class="icon" src="/static/logo-pulse.svg" alt="">
+    <h1>Пульс маршрута</h1>
+    <form id="f" novalidate>
+      <div class="fields" id="fields">
+        <div class="field"><input id="u" name="username" autocomplete="username" placeholder=" " required autofocus><label for="u">Логин</label></div>
+        <div class="field"><input id="p" name="password" type="password" autocomplete="current-password" placeholder=" " required><label for="p">Пароль</label>
+          <button class="go" id="go" type="submit" aria-label="Войти" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+      </div>
+      <div class="msg" id="msg" role="alert"></div>
+    </form>
+    <div class="foot"><span class="status"><i></i>Все системы работают</span></div>
+  </div>
+</main>
+<script>
+const u = document.getElementById('u'), p = document.getElementById('p'), go = document.getElementById('go'),
+      msg = document.getElementById('msg'), fields = document.getElementById('fields'), f = document.getElementById('f');
+const arrow = go.innerHTML;
+const sync = () => { go.disabled = !(u.value.trim() && p.value); fields.classList.remove('err'); msg.textContent = ''; };
+u.addEventListener('input', sync); p.addEventListener('input', sync);
+u.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); p.focus(); } });
+f.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (go.disabled) return;
+  go.disabled = true; go.innerHTML = '<span class="spin"></span>';
+  try {
+    const r = await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user: u.value.trim(), password: p.value})});
+    if (r.ok) { location.href = '/'; return; }
+    const d = await r.json().catch(() => ({}));
+    fail(d.detail || 'Не удалось войти');
+  } catch (_) { fail('Нет связи с сервером'); }
+});
+function fail(text) {
+  go.innerHTML = arrow; msg.textContent = text; fields.classList.add('err');
+  fields.classList.remove('shake'); void fields.offsetWidth; fields.classList.add('shake');
+  p.value = ''; p.focus(); go.disabled = true;
+}
+</script>
+</body>
+</html>

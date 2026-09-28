@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Пульс маршрута">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38D1C4"/><stop offset="1" stop-color="#0A6CFF"/></linearGradient></defs>
+  <rect width="512" height="512" rx="116" fill="url(#g)"/>
+  <circle cx="256" cy="256" r="178" fill="#fff" fill-opacity=".1"/>
+  <path d="M84 272h92l44-104 80 208 44-104h84" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="428" cy="272" r="22" fill="#fff"/>
+</svg>
